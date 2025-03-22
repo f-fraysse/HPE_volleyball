@@ -1,0 +1,40 @@
+# Byte-compiled / cache files
+__pycache__/
+*.py[cod]
+*.so
+
+# VSCode config — keep only settings.json for linting paths
+.vscode/*
+!.vscode/settings.json
+
+# Virtual environments
+.env/
+.venv/
+env/
+
+# ByteTrack build artifacts
+ByteTrack/build/
+ByteTrack/yolox.egg-info/
+
+# Python egg metadata
+*.egg-info/
+
+# Output and data (can be re-generated or are too large)
+output/
+data/
+models/
+
+# Model/result files
+*.h5
+*.mp4
+*.avi
+*.onnx
+*.pth
+*.log
+
+# Jupyter/IPython checkpoints
+.ipynb_checkpoints/
+
+# System-specific
+.DS_Store
+Thumbs.db

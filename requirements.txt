@@ -1,0 +1,49 @@
+# Core scientific stack
+numpy
+scipy
+cython
+cython_bbox
+h5py
+pillow
+pyyaml
+tqdm
+matplotlib
+opencv-python
+
+# Deep learning
+torch>=1.7
+torchvision>=0.10.0
+onnxruntime-gpu==1.20.1
+
+# Tracking / detection
+lap
+motmetrics
+filterpy
+rtmlib
+
+# Image and graph processing
+scikit-image
+networkx
+
+# Logging and diagnostics
+loguru
+coloredlogs
+humanfriendly
+
+# Data analysis
+pandas
+
+# ONNX and protocol communication
+flatbuffers
+protobuf
+grpcio
+
+# Utilities
+tabulate
+sympy
+absl-py
+
+# Optional (only needed if training, compiling, or profiling models)
+# thop
+# ninja
+# tensorboard
