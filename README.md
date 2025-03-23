@@ -22,10 +22,10 @@ https://github.com/user-attachments/assets/3a20771c-83d7-40c8-b43a-f9a36d718dc5
 ```
 HPE_volleyball/
 ├── ByteTrack/           # Forked + modified ByteTrack repo (tracking)
-├── models/              # RTMPose model weights, ONNX files, etc.
-├── data/                # Input videos for processing
+├── models/              # model files (.onnx) for RTMPose and RTMDet
+├── data/                # Input videos
 ├── output/
-│   ├── h5/              # HDF5 outputs: poses, IDs, bboxes, scores
+│   ├── h5/              # HDF5 outputs: IDs, bboxes, keypoints, scores
 │   └── video/           # Output videos with overlays
 ├── scripts/             # Custom scripts (main pipeline, helpers)
 ├── paths.py             # Project-relative path definitions
@@ -38,6 +38,8 @@ To run inference on GPU, make sure the following are properly installed:
 
 - **CUDA Toolkit** (e.g. CUDA 11.8 or compatible with your PyTorch version)
 - **cuDNN** (compatible with your CUDA version)
+
+Confirmed to work with CUDA 12.4 + CUDNN 9.7 on GTX 1070 Ti
 
 ## ⚙️ Setup
 
