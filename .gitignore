@@ -26,7 +26,6 @@ models/
 
 # Model/result files
 *.h5
-*.mp4
 *.avi
 *.onnx
 *.pth

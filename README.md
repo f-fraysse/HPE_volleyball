@@ -5,6 +5,12 @@ This project combines object detection, multi-object tracking, and pose estimati
 👉 You can download pre-trained RTMDet and RTMPose ONNX models from:
 https://platform.openmmlab.com/deploee
 
+## 🎥 Demo
+
+[![Click to view demo video](assets/demo_thumbnail.png)](assets/demo.mp4)
+
+> 📽️ Click the image to watch the full demo (1080p MP4)
+
 ## 📁 Project Structure
 
 ```

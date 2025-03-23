@@ -1,3 +1,5 @@
+# You can run this simple script to test RTMLIB is installed and working (no tracking)
+
 import cv2
 from rtmlib import Body, draw_skeleton, draw_bbox
 import time
