@@ -1,9 +1,8 @@
 # HPE_volleyball
 
-This project combines object detection, multi-object tracking, and pose estimation to analyze volleyball training sessions. It uses a customized version of [ByteTrack](https://github.com/ifzhang/ByteTrack) and RTMPose (through RTMlib) for tracking and pose analysis of players during spiking actions.
+This project combines object detection, multi-object tracking, and pose estimation to analyze volleyball training sessions. It uses a customized version of [ByteTrack](https://github.com/ifzhang/ByteTrack) and RTMPose (through [RTMlib](https://github.com/Tau-J/rtmlib)) for tracking and pose analysis of players during spiking actions.
 
-👉 You can download pre-trained RTMDet and RTMPose ONNX models from:
-https://platform.openmmlab.com/deploee
+👉 You can download pre-trained RTMDet and RTMPose ONNX models from [OpenMMLab Deploee](https://platform.openmmlab.com/deploee)
 
 ## 🎥 Demo
 
