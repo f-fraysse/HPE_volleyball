@@ -14,15 +14,15 @@ ensure_output_dirs()
 #---------- CONFIGURATION ------------------
 # Video Paths
 record_output = False
-IN_VIDEO_FILE = 'SAMPLE_17_01_2025_C2_S1.mp4'
-OUT_VIDEO_FILE = 'test_det-M_pose-M_track-0508.mp4'
+IN_VIDEO_FILE = 'SAMPLE2.mp4'
+OUT_VIDEO_FILE = 'SAMPLE2_det-M_pose-M_track-0508.mp4'
 resize_output = False
 resize_width = 960
 resize_height = 540
 
 # Data Paths
 record_results = False
-OUT_H5_FILE = "test_det-M_pose-M_track-0508.h5"
+OUT_H5_FILE = "SAMPLE2_det-M_pose-M_track-0508.h5"
 
 # Detection and tracking models
 RTMDET_MODEL = 'rtmdet-m-640.onnx'
