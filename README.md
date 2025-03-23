@@ -7,10 +7,7 @@ https://platform.openmmlab.com/deploee
 
 ## 🎥 Demo
 
-[![Click to view demo video](assets/demo_thumbnail.png)](https://github.com/user-attachments/assets/cd351c76-cc46-45f7-b08e-cb8340928aaa)
-
-
-> 📽️ Click the image to watch the full demo (1080p MP4)
+https://github.com/user-attachments/assets/3a20771c-83d7-40c8-b43a-f9a36d718dc5
 
 ## 📁 Project Structure
 
