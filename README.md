@@ -4,6 +4,15 @@ This project combines object detection, multi-object tracking, and pose estimati
 
 👉 You can download pre-trained RTMDet and RTMPose ONNX models from [OpenMMLab Deploee](https://platform.openmmlab.com/deploee)
 
+❗ Still in very early stages ❗
+
+💹 Detection with RTMdet, trackin with Bytetrack, pose estimation with RTMPose
+💹 Save output video with bboxes and poses overlay
+❌ Spike detection from pose data + some heuristics (to start with)
+❌ Edit tracked IDs manually (delete unused IDs, "relabel" IDs)
+❌ Interpolation / smoothing/ manual editing of keypoints
+❌ Performance optimisations
+
 ## 🎥 Demo
 
 https://github.com/user-attachments/assets/3a20771c-83d7-40c8-b43a-f9a36d718dc5
