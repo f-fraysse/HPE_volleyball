@@ -86,6 +86,14 @@ GPU inference requires a working CUDA installation compatible with your PyTorch/
 Francois Fraysse — [frayssfe@gmail.com]
 
 Thanks and credits to:  
-- MMPose project - [https://github.com/open-mmlab/mmpose]  
-- RTMlib - [https://github.com/Tau-J/rtmlib]  
+- MMPose project - [https://github.com/open-mmlab/mmpose]
+- RTMlib - [https://github.com/Tau-J/rtmlib]
 - ByteTrack - [https://github.com/ifzhang/ByteTrack]
+
+### 📚 Licensing
+
+This project is licensed under the [Apache 2.0 License](LICENSE).
+
+It includes:
+- [ByteTrack](https://github.com/ifzhang/ByteTrack) (MIT License) – see `ByteTrack/LICENSE`
+- [RTMLib](https://github.com/open-mmlab/rtmlib) (Apache 2.0 License)
