@@ -6,11 +6,11 @@ This project combines object detection, multi-object tracking, and pose estimati
 
 🔺 Still in very early stages! 🔺
 
-💹 Detection with RTMdet, trackin with Bytetrack, pose estimation with RTMPose<br>
+💹 Detection with RTMdet, tracking with Bytetrack, pose estimation with RTMPose<br>
 💹 Save output video with bboxes and poses overlay<br>
-❌ Spike detection from pose data + some heuristics (to start with)<br>
 ❌ Edit tracked IDs manually (delete unused IDs, "relabel" IDs)<br>
 ❌ Interpolation / smoothing/ manual editing of keypoints<br>
+❌ Spike detection from pose data + some heuristics (to start with)<br>
 ❌ Performance optimisations
 
 ## 🎥 Demo
