@@ -7,7 +7,7 @@ https://platform.openmmlab.com/deploee
 
 ## 🎥 Demo
 
-[![Click to view demo video](assets/demo_thumbnail.png)](https://raw.githubusercontent.com/f-fraysse/HPE_volleyball/main/assets/test_det-X_pose-M_track-0508.mp4)
+[![Click to view demo video](assets/demo_thumbnail.png)](https://github.com/f-fraysse/HPE_volleyball/raw/refs/heads/main/assets/test_det-X_pose-M_track-0508.mp4)
 
 
 > 📽️ Click the image to watch the full demo (1080p MP4)
