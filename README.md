@@ -94,7 +94,7 @@ GPU inference requires a working CUDA installation compatible with your PyTorch/
 
 ## ✏️ Author
 
-Francois Fraysse — [frayssfe@gmail.com]
+Francois Fraysse - UniSA
 
 Thanks and credits to:  
 - MMPose project - [https://github.com/open-mmlab/mmpose]
