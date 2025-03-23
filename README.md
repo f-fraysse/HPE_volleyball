@@ -9,8 +9,6 @@ https://platform.openmmlab.com/deploee
 
 [![Click to view demo video](assets/demo_thumbnail.png)](assets/test_det-X_pose-M_track-0508.mp4)
 
-<video src='assets/test_det-X_pose-M_track-0508.mp4' width=960/>
-
 > 📽️ Click the image to watch the full demo (1080p MP4)
 
 ## 📁 Project Structure
