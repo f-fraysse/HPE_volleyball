@@ -61,6 +61,13 @@ To run inference on GPU, make sure the following are properly installed:
 
 Work in progress — main script(s) will be located in `scripts/`.
 
+1. add your input video to /data/
+2. add your ONNX models to /models/:
+   a. download ONNX models from OpenMMLab Deployee: https://platform.openmmlab.com/deploee 
+      - RTMDet model for detection
+      - RTMPose model for pose estimation
+3. run MAIN.py, the start of the script has config options
+
 ## 📦 Dependencies
 
 All Python packages are listed in `requirements.txt`.
