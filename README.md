@@ -66,7 +66,7 @@ Work in progress — main script(s) will be located in `scripts/`.
       - download ONNX models from OpenMMLab Deployee: https://platform.openmmlab.com/deploee 
       - RTMDet model for detection
       - RTMPose model for pose estimation
-3. run MAIN.py, the start of the script has config options
+3. run scripts/MAIN.py, the start of the script has config options
 4. video file with overlaid bboxes, IDs, bbox scores and poses saved in output/video
 5. HDF5 file with tracked IDs, bboxes and scores, keypoints and scores saved in output/h5
 
