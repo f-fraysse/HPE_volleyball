@@ -77,9 +77,10 @@ Confirmed to work with CUDA 12.6 + CUDNN 9.8 on GTX 4060
    cd ..
    ```
 5. **Manually change a line in RTMlib** (needed to output bbox scores)<br>
-   navigate to {Miniconda install path}\envs\HPE_volleyball\Lib\site-packages\rtmlib\tools\object_detection<br>
-   Edit rtmdet.py:<br>
-   Line 141 (end of postprocess() function) reads:<br>
+
+   - navigate to {Miniconda install path}\envs\HPE_volleyball\Lib\site-packages\rtmlib\tools\object_detection<br>
+   - Edit rtmdet.py:<br>
+   - Line 141 (end of postprocess() function) reads:<br>
    ```python
    return final_boxes
    ```
