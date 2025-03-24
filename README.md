@@ -46,6 +46,8 @@ For cuDNN, I find the easiest is to copy / paste the dlls from cuDNN folder dire
 same for /include (.h files)
 same for /lib/x64 (.lib files)
 
+Alternatively you can add the three cuDNN folder to system PATH.
+
 Confirmed to work with CUDA 12.4 + CUDNN 9.7 on GTX 1070 Ti
 Confirmed to work with CUDA 12.6 + CUDNN 9.8 on GTX 4060
 
@@ -74,19 +76,19 @@ Confirmed to work with CUDA 12.6 + CUDNN 9.8 on GTX 4060
    pip install -e .
    cd ..
    ```
-5. **Manually change a line in RTMlib** (needed to output bbox scores)
-navigate to {Miniconda install path}\envs\HPE_volleyball\Lib\site-packages\rtmlib\tools\object_detection
-Edit rtmdet.py:
-Line 141 (end of postprocess() function) reads:
-```python
-return final_boxes
-```
-change it to:
-```python
-return final_boxes, final_scores
-```
+5. **Manually change a line in RTMlib** (needed to output bbox scores)<br>
+   navigate to {Miniconda install path}\envs\HPE_volleyball\Lib\site-packages\rtmlib\tools\object_detection<br>
+   Edit rtmdet.py:<br>
+   Line 141 (end of postprocess() function) reads:<br>
+   ```python
+   return final_boxes
+   ```
+   change it to:<br>
+   ```python
+   return final_boxes, final_scores
+   ```
 
-5. (Optional) Ensure output folders are created:
+6. (Optional) Ensure output folders are created:
    ```python
    from scripts.paths import ensure_output_dirs
    ensure_output_dirs()
