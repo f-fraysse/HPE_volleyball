@@ -40,7 +40,7 @@ To run inference on GPU, make sure the following are properly installed:
 - **CUDA Toolkit** (e.g. CUDA 12.x or compatible with your PyTorch version)
 - **cuDNN** (compatible with your CUDA version)
 
-1. Check which version of CUDA your GPU driver support:
+1. Check which version of CUDA your GPU driver supports:
   ```bash
    nvidia-smi
    ```
