@@ -42,6 +42,7 @@ grpcio
 tabulate
 sympy
 absl-py
+thop
 
 # Optional (only needed if training, compiling, or profiling models)
 # thop

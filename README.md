@@ -36,32 +36,57 @@ HPE_volleyball/
 
 To run inference on GPU, make sure the following are properly installed:
 
-- **CUDA Toolkit** (e.g. CUDA 11.8 or compatible with your PyTorch version)
+- **C++ Build Tools for Visual Studio** C++ compiler is required to build cython wheels
+- **CUDA Toolkit** (e.g. CUDA 12.x or compatible with your PyTorch version)
 - **cuDNN** (compatible with your CUDA version)
 
+For cuDNN, I find the easiest is to copy / paste the dlls from cuDNN folder directly into CUDA folder.
+
+{cudNN install path}/bin/{version} -> copy and paste all dlls to {CUDA install path}/bin
+same for /include (.h files)
+same for /lib/x64 (.lib files)
+
 Confirmed to work with CUDA 12.4 + CUDNN 9.7 on GTX 1070 Ti
+Confirmed to work with CUDA 12.6 + CUDNN 9.8 on GTX 4060
 
 ## ⚙️ Setup
 
-1. **Clone this repo**
+1. **Create a conda environment and activate it**
    ```bash
-   git clone https://github.com/yourusername/HPE_volleyball.git
+   conda create -n HPE-volleyball python=3.10
+   conda activate HPE-volleyball
+   ```
+
+2. **Clone this repo**
+   ```bash
+   git clone https://github.com/f-fraysse/HPE_volleyball.git
    cd HPE_volleyball
    ```
 
-2. **Set up environment**
+3. **Set up environment**
    ```bash
    pip install -r requirements.txt
    ```
 
-3. **Install ByteTrack**
+4. **Install ByteTrack**
    ```bash
    cd ByteTrack
    pip install -e .
    cd ..
    ```
+5. **Manually change a line in RTMlib** (needed to output bbox scores)
+navigate to {Miniconda install path}\envs\HPE_volleyball\Lib\site-packages\rtmlib\tools\object_detection
+Edit rtmdet.py:
+Line 141 (end of postprocess() function) reads:
+```python
+return final_boxes
+```
+change it to:
+```python
+return final_boxes, final_scores
+```
 
-4. (Optional) Ensure output folders are created:
+5. (Optional) Ensure output folders are created:
    ```python
    from scripts.paths import ensure_output_dirs
    ensure_output_dirs()
