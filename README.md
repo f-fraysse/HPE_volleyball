@@ -36,7 +36,7 @@ HPE_volleyball/
 
 To run inference on GPU, make sure the following are properly installed:
 
-- **C++ Build Tools for Visual Studio** C++ compiler is required to build cython wheels
+- **C++ Build Tools for Visual Studio**: C++ compiler is required to build Cython wheels
 - **CUDA Toolkit** (e.g. CUDA 12.x or compatible with your PyTorch version)
 - **cuDNN** (compatible with your CUDA version)
 
