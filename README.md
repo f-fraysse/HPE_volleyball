@@ -40,13 +40,23 @@ To run inference on GPU, make sure the following are properly installed:
 - **CUDA Toolkit** (e.g. CUDA 12.x or compatible with your PyTorch version)
 - **cuDNN** (compatible with your CUDA version)
 
-For cuDNN, I find the easiest is to copy / paste the dlls from cuDNN folder directly into CUDA folder.
+1. Check which version of CUDA your GPU driver support:
+  ```bash
+   nvidia-smi
+   ```
+   On the top right you will see "CUDA Version", this is the **most recent** version you can use.
 
-{cudNN install path}/bin/{version} -> copy and paste all dlls to {CUDA install path}/bin
-same for /include (.h files)
-same for /lib/x64 (.lib files)
+2. Download and install CUDA toolkit with appropriate version
+3. Now go check [version compatibility](https://onnxruntime.ai/docs/execution-providers/CUDA-ExecutionProvider.html) for compatible cuDNN and ONNX runtime versions
+4. Download appropriate cuDNN version (use cuDNN archive if you need an older version)
 
-Alternatively you can add the three cuDNN folder to system PATH.
+   - For cuDNN, I find the easiest is to copy / paste the dlls from cuDNN folder directly into CUDA folder.
+      - {cudNN install path}/bin/{version} -> copy and paste all dlls to {CUDA install path}/bin<br>
+      - same for /include (.h files)<br>
+      - same for /lib/x64 (.lib files)<br>
+   - Alternatively you can add the three cuDNN folder to system PATH.
+
+5. This repo installs onnxruntime-gpu version 1.20.1 by default (CUDA 12.x - cuDNN 9.x), if not compatible with CUDA / cuDNN, then install the compatible one.
 
 Confirmed to work with CUDA 12.4 + CUDNN 9.7 on GTX 1070 Ti
 Confirmed to work with CUDA 12.6 + CUDNN 9.8 on GTX 4060
@@ -105,7 +115,7 @@ Work in progress — main script(s) will be located in `scripts/`.
       - RTMDet model for detection
       - RTMPose model for pose estimation
       - M-size models seem to provide a good balance of performance and speed ( RTMDet-m, RTMPose-m)
-3. run scripts/MAIN.py, the start of the script has config options
+3. run **scripts/MAIN.py**, the start of the script has config options
 4. video file with overlaid bboxes, IDs, bbox scores and poses saved in output/video
 5. HDF5 file with tracked IDs, bboxes and scores, keypoints and scores saved in output/h5
 
@@ -118,6 +128,7 @@ GPU inference requires a working CUDA installation compatible with your PyTorch/
 ## 📄 Notes
 
 - ByteTrack has been modified (e.g. fixed deprecated NumPy types).
+- RTMlib has been slightly modified (see Setup, Step 5) to output bbox scores
 - All paths are defined relative to the project root via `paths.py`.
 
 ## ✏️ Author
