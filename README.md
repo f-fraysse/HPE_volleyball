@@ -58,7 +58,7 @@ To run inference on GPU, make sure the following are properly installed:
 
 5. This repo installs onnxruntime-gpu version 1.20.1 by default (CUDA 12.x - cuDNN 9.x), if not compatible with CUDA / cuDNN, then install the compatible one.
 
-Confirmed to work with CUDA 12.4 + CUDNN 9.7 on GTX 1070 Ti
+Confirmed to work with CUDA 12.4 + CUDNN 9.7 on GTX 1070 Ti<br>
 Confirmed to work with CUDA 12.6 + CUDNN 9.8 on GTX 4060
 
 ## ⚙️ Setup
