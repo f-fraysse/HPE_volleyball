@@ -13,7 +13,7 @@ ensure_output_dirs()
 
 #---------- CONFIGURATION ------------------
 # Video Paths
-record_output = True
+record_output = False
 IN_VIDEO_FILE = 'SAMPLE_17_01_2025_C2_S1.mp4'
 OUT_VIDEO_FILE = 'SAMPLE_det-M_pose-M_track-0508.mp4'
 resize_output = False
@@ -21,7 +21,7 @@ resize_width = 960
 resize_height = 540
 
 # Data Paths
-record_results = True
+record_results = False
 OUT_H5_FILE = "SAMPLE2_det-M_pose-M_track-0508.h5"
 
 # Detection and tracking models
@@ -87,13 +87,13 @@ pose_estimator = RTMPose(
 
 # ------------ START LOOP OVER FRAMES --------------
 frame_id = 0
+global_start = time.time()
 while cap.isOpened():
 
     start_time = time.time()
     success, frame = cap.read()
     if not success:
         break
-
     frame_id += 1
     cap_time = time.time()
 
@@ -221,3 +221,6 @@ if record_results:
         index_group.create_dataset(str(tid), data=np.array(frames, dtype='int32'))
 
     h5file.close()
+
+finish_time = time.time()
+print(f"total time: {(finish_time - global_start):.1f} seconds")
