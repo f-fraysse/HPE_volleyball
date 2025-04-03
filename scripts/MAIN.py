@@ -17,7 +17,7 @@ ensure_output_dirs()
 # Video Paths
 record_output = False
 IN_VIDEO_FILE = 'SAMPLE_17_01_2025_C2_S1.mp4'
-OUT_VIDEO_FILE = 'SAMPLE_det-M_pose-M_track-0508.mp4'
+OUT_VIDEO_FILE = 'SAMPLE_det-M_pose-M_track-0508_Body26.mp4'
 resize_output = False
 resize_width = 960
 resize_height = 540
@@ -28,7 +28,7 @@ OUT_H5_FILE = "SAMPLE2_det-M_pose-M_track-0508.h5"
 
 # Detection and tracking models
 RTMDET_MODEL = 'rtmdet-m-640.onnx'
-RTMPOSE_MODEL = 'rtmpose-m-256-192.onnx'
+RTMPOSE_MODEL = 'rtmpose-m-256-192_26k.onnx'
 
 # RTMPose engine
 device = 'cuda'
@@ -114,7 +114,7 @@ tracker = BYTETracker(args)
 # init pose detector
 pose_estimator = RTMPose(
             onnx_model=RTMPOSE_MODEL,
-            model_input_size = (192, 256),            
+            model_input_size = (192, 256),        # 288, 384    
             backend=backend,
             device=device)
 
