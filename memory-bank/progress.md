@@ -53,22 +53,29 @@
 
 ### 🔄 Current Focus: Performance Optimization
 
-1. **Detailed Profiling**
-   - Need to implement detailed timing measurements for each component
-   - Break down preprocessing, inference, and postprocessing times
-   - Identify specific bottlenecks within each stage
+1. **Detailed Profiling** ✅
+   - Implemented detailed timing measurements for each component
+   - Added breakdown of preprocessing, inference, and postprocessing times
+   - Added CSV logging of all timing data
+   - Added summary statistics output
 
-2. **ONNX Runtime Optimization**
+2. **RTMlib Integration** ✅
+   - Switched from using RTMlib as an installed package to a local editable copy
+   - Modified RTMlib to include detailed timing measurements
+   - Included the modified RTMlib in the project repository
+   - Updated installation instructions in README.md
+
+3. **ONNX Runtime Optimization**
    - Investigate and resolve warnings about CPU operations
    - Experiment with graph optimization settings
    - Configure execution providers appropriately
 
-3. **Preprocessing/Postprocessing Optimization**
-   - Identify and optimize inefficient operations
+4. **Preprocessing/Postprocessing Optimization**
+   - Identify and optimize inefficient operations based on profiling results
    - Minimize unnecessary data conversions
    - Optimize memory usage and transfers
 
-4. **Implementation of Optimization Strategies**
+5. **Implementation of Optimization Strategies**
    - Run detection less frequently (every N frames)
    - Batch pose estimation inputs
    - Explore model quantization (FP16)
@@ -120,7 +127,8 @@
 
 ### 🟡 In Progress
 
-- 🔄 Performance profiling
+- ✅ Performance profiling
+- 🔄 Analyzing profiling results
 - 🔄 Identifying optimization opportunities
 - 🔄 Investigating ONNX Runtime warnings
 
@@ -135,9 +143,10 @@
    - Warnings about operations being assigned to CPU instead of GPU
    - Potential impact on performance due to CPU-GPU transfers
 
-3. **RTMlib Modification Requirement**
-   - Need for manual modification of RTMlib to output bbox scores
-   - Potential maintenance issue with future RTMlib updates
+3. **RTMlib Modification** ✅
+   - Addressed by using a local editable copy of RTMlib
+   - Modifications for bbox scores and profiling are now part of the project repository
+   - No longer dependent on manual modifications to installed packages
 
 ## Performance Metrics
 
@@ -152,13 +161,17 @@
 
 ## Next Milestone
 
-**Detailed Performance Profiling**
+**Analyze Profiling Results and Implement Optimizations**
 
-- Implement timing measurements for preprocessing, inference, and postprocessing
-- Identify specific bottlenecks within each stage
-- Document findings and prioritize optimization strategies
-- Implement and evaluate initial optimizations
+- Analyze the detailed profiling data collected from CSV logs
+- Identify the specific bottlenecks in preprocessing, inference, and postprocessing
+- Prioritize optimization strategies based on profiling results
+- Implement the most promising optimizations
+- Measure the impact of each optimization
 
 **Target Completion**: TBD
 
-**Success Criteria**: Clear understanding of where time is being spent in the pipeline and identification of at least 3 specific optimization opportunities with estimated impact.
+**Success Criteria**: 
+- Identification of at least 3 specific optimization opportunities with estimated impact
+- Implementation of at least 1 optimization strategy
+- Measurable improvement in overall processing speed

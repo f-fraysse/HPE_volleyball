@@ -86,18 +86,15 @@ Confirmed to work with CUDA 12.6 + CUDNN 9.8 on GTX 4060
    pip install -e .
    cd ..
    ```
-5. **Manually change a line in RTMlib** (needed to output bbox scores)<br>
-
-   - navigate to {Miniconda install path}\envs\HPE_volleyball\Lib\site-packages\rtmlib\tools\object_detection<br>
-   - Edit rtmdet.py:<br>
-   - Line 141 (end of postprocess() function) reads:<br>
-   ```python
-   return final_boxes
+5. **Install RTMlib in development mode**
+   ```bash
+   # Install the included RTMlib in development mode
+   cd rtmlib
+   pip install -e .
+   cd ..
    ```
-   change it to:<br>
-   ```python
-   return final_boxes, final_scores
-   ```
+   
+   This installs the included RTMlib in development mode. The necessary modifications for outputting bbox scores and detailed profiling have already been implemented in this local copy.
 
 6. (Optional) Ensure output folders are created:
    ```python

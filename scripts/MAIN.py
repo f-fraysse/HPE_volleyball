@@ -3,6 +3,8 @@ import cv2
 import os
 import time
 import numpy as np
+import csv
+from datetime import datetime
 from pathlib import Path
 from argparse import Namespace
 from rtmlib import RTMDet, RTMPose, draw_skeleton
@@ -32,6 +34,37 @@ RTMPOSE_MODEL = 'rtmpose-m-256-192.onnx'
 device = 'cuda'
 backend = 'onnxruntime'
 #---------- CONFIGURATION ------------------
+
+# Create profiling logs directory
+log_dir = "profiling_logs"
+os.makedirs(log_dir, exist_ok=True)
+timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+log_file = os.path.join(log_dir, f"profiling_{timestamp}.csv")
+
+# Initialize CSV log file with headers
+with open(log_file, 'w', newline='') as f:
+    writer = csv.writer(f)
+    writer.writerow([
+        'frame_id', 
+        'det_total', 'det_preprocess', 'det_inference', 'det_postprocess',
+        'pose_total', 'pose_preprocess', 'pose_inference', 'pose_postprocess', 'pose_num_bboxes',
+        'cap_time', 'track_time', 'hdf5_time', 'disp_time', 'total_frame_time'
+    ])
+
+# Add these variables to track timing statistics
+det_timing_stats = {
+    'total': [],
+    'preprocess': [],
+    'inference': [],
+    'postprocess': []
+}
+
+pose_timing_stats = {
+    'total': [],
+    'preprocess': [],
+    'inference': [],
+    'postprocess': []
+}
 
 # Make the full path + file names
 RTMDET_MODEL = os.path.join(MODEL_DIR, RTMDET_MODEL)
@@ -97,9 +130,15 @@ while cap.isOpened():
     frame_id += 1
     cap_time = time.time()
 
-    # Step 1: Detection
-    det_bboxes, det_scores = detector(frame)  # [x1, y1, x2, y2, conf]
+    # Step 1: Detection with timing
+    det_bboxes_scores, det_timing = detector(frame)  # [x1, y1, x2, y2, conf]
+    det_bboxes, det_scores = det_bboxes_scores
     det_time = time.time() 
+    
+    # Update detection timing statistics
+    for key in det_timing:
+        if key in det_timing_stats:
+            det_timing_stats[key].append(det_timing[key])
 
     # Step 2: Format for ByteTrack
     if len(det_bboxes) > 0:
@@ -128,8 +167,25 @@ while cap.isOpened():
         bbox_scores.append(track.score if hasattr(track, "score") else 0.0)        
         bbox_rects.append((x1, y1, x2, y2, track_id, track.score if hasattr(track, "score") else None))
 
+    # Initialize pose timing info with zeros in case there are no tracked bboxes
+    pose_timing = {
+        'total': 0,
+        'preprocess': 0,
+        'inference': 0,
+        'postprocess': 0,
+        'num_bboxes': 0
+    }
+    
     if len(tracked_bboxes) > 0:
-        keypoints_list, scores_list = pose_estimator(frame, tracked_bboxes)
+        keypoints_list, scores_list, pose_timing = pose_estimator(frame, tracked_bboxes)
+        
+        # Update pose timing statistics
+        for key in pose_timing:
+            if key in pose_timing_stats and key != 'num_bboxes':
+                pose_timing_stats[key].append(pose_timing[key])
+    else:
+        keypoints_list, scores_list = [], []
+        
     pose_time = time.time()
 
     # Build the HDF5 file
@@ -187,6 +243,18 @@ while cap.isOpened():
     pose_duration = (pose_time - track_time) * 1000
     hdf5_duration = (hdf_time - pose_time) * 1000
     disp_duration = (disp_time - hdf_time) * 1000
+    total_frame_time = (disp_time - start_time) * 1000
+    
+    # Write to CSV log
+    with open(log_file, 'a', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow([
+            frame_id,
+            det_timing['total'], det_timing['preprocess'], det_timing['inference'], det_timing['postprocess'],
+            pose_timing['total'], pose_timing['preprocess'], pose_timing['inference'], pose_timing['postprocess'], 
+            pose_timing['num_bboxes'],
+            cap_duration, track_duration, hdf5_duration, disp_duration, total_frame_time
+        ])
     
 
     img_show = cv2.putText(img_show, f'Volleyball Action Detection - FRANCOIS FRAYSSE @ UNISA', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 127, 0), 2)
@@ -224,3 +292,18 @@ if record_results:
 
 finish_time = time.time()
 print(f"total time: {(finish_time - global_start):.1f} seconds")
+
+# Print summary statistics
+print("\n===== DETECTION TIMING STATISTICS =====")
+for key in det_timing_stats:
+    times = det_timing_stats[key]
+    if times:
+        print(f"{key}: min={min(times):.2f}ms, max={max(times):.2f}ms, avg={sum(times)/len(times):.2f}ms, median={sorted(times)[len(times)//2]:.2f}ms")
+
+print("\n===== POSE ESTIMATION TIMING STATISTICS =====")
+for key in pose_timing_stats:
+    times = pose_timing_stats[key]
+    if times:
+        print(f"{key}: min={min(times):.2f}ms, max={max(times):.2f}ms, avg={sum(times)/len(times):.2f}ms, median={sorted(times)[len(times)//2]:.2f}ms")
+
+print(f"\nDetailed profiling data saved to: {log_file}")

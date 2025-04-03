@@ -55,11 +55,13 @@
 ```
 HPE_volleyball/
 ├── ByteTrack/           # Forked + modified ByteTrack repo (tracking)
+├── rtmlib/              # Modified RTMlib with profiling capabilities
 ├── models/              # model files (.onnx) for RTMPose and RTMDet
 ├── data/                # Input videos
 ├── output/
 │   ├── h5/              # HDF5 outputs: IDs, bboxes, keypoints, scores
 │   └── video/           # Output videos with overlays
+├── profiling_logs/      # CSV logs of detailed timing data
 ├── scripts/             # Custom scripts (main pipeline, helpers)
 ├── paths.py             # Project-relative path definitions
 └── requirements.txt     # Python dependencies
@@ -97,13 +99,10 @@ HPE_volleyball/
    - Need to investigate and optimize model operations
 
 3. **RTMlib Modifications**
-   - Required manual modification to output bbox scores:
-   ```python
-   # Line 141 in rtmdet.py changed from:
-   return final_boxes
-   # to:
-   return final_boxes, final_scores
-   ```
+   - Local copy of RTMlib included in the repository
+   - Modified to include detailed profiling capabilities
+   - Modified to output bbox scores for tracking
+   - Installed in development mode for easy modification
 
 ### Performance Constraints
 
@@ -146,9 +145,14 @@ HPE_volleyball/
    cd ..
    ```
 
-4. **Modify RTMlib**
-   - Navigate to RTMlib installation
-   - Edit rtmdet.py to return scores
+4. **Install RTMlib**
+   ```bash
+   cd rtmlib
+   pip install -e .
+   cd ..
+   ```
+   - Installs the included RTMlib in development mode
+   - Modifications for bbox scores and profiling already implemented
 
 ## Development Workflow
 
@@ -171,26 +175,36 @@ HPE_volleyball/
 
 ## Performance Profiling
 
-Current focus is on detailed profiling of the inference pipeline to identify bottlenecks:
+Detailed profiling has been implemented to identify bottlenecks in the inference pipeline:
 
-1. **Preprocessing Time**
-   - Image resizing
-   - Normalization
-   - Data format conversions
+1. **Profiling Implementation**
+   - Modified RTMlib to include detailed timing measurements
+   - Added timing for preprocessing, inference, and postprocessing
+   - Implemented CSV logging of all timing data
+   - Added summary statistics output
 
-2. **ONNX Session Time**
-   - Actual model inference time
-   - GPU operation time
+2. **Profiled Components**
+   - **Preprocessing Time**
+     - Image resizing
+     - Normalization
+     - Data format conversions
+   - **ONNX Session Time**
+     - Actual model inference time
+     - GPU operation time
+   - **Postprocessing Time**
+     - Decoding model outputs
+     - Non-maximum suppression
+     - Coordinate transformations
+   - **Overhead**
+     - Memory transfers between CPU and GPU
+     - API call overhead
+     - Data structure conversions
 
-3. **Postprocessing Time**
-   - Decoding model outputs
-   - Non-maximum suppression
-   - Coordinate transformations
-
-4. **Overhead**
-   - Memory transfers between CPU and GPU
-   - API call overhead
-   - Data structure conversions
+3. **Data Collection**
+   - CSV logs stored in `/profiling_logs/` directory
+   - Each run generates a timestamped CSV file
+   - Contains per-frame timing data for all components
+   - Summary statistics printed at the end of processing
 
 ## Future Technical Considerations
 

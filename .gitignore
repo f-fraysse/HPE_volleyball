@@ -23,6 +23,7 @@ ByteTrack/yolox.egg-info/
 output/
 data/
 models/
+profiling_logs/
 
 # Model/result files
 *.h5

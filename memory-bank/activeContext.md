@@ -56,6 +56,17 @@ The immediate focus is on **detailed profiling** of the inference pipeline to id
 
 4. **Created optimization guide** outlining potential strategies for improving performance.
 
+5. **Implemented detailed profiling**:
+   - Modified RTMlib to include detailed timing measurements
+   - Added timing for preprocessing, inference, and postprocessing in both detection and pose estimation
+   - Implemented CSV logging of all timing data
+   - Added summary statistics output
+
+6. **Changed RTMlib handling**:
+   - Switched from using RTMlib as an installed package to a local editable copy
+   - Included the modified RTMlib in the project repository
+   - Updated installation instructions in README.md
+
 ## Next Steps
 
 ### Immediate Tasks
