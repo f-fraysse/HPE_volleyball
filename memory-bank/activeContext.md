@@ -13,28 +13,44 @@ Increase the processing speed from the current ~5.4 FPS to a target of at least 
 | Component | Current Time | Target Time |
 |-----------|--------------|------------|
 | Frame Capture | ~5-6 ms | (Already efficient) |
-| Detection | ~40-110 ms | <20 ms |
+| Detection | ~31-47 ms | <20 ms |
 | Tracking | ~1 ms | (Already efficient) |
-| Pose Estimation | ~40-75 ms | <20 ms |
+| Pose Estimation | ~31-47 ms (for all bboxes) | <20 ms |
 | Display/Storage | ~1-5 ms | (Already efficient) |
 | **Total** | ~90-190 ms/frame | <50 ms/frame |
 
 ## Current Investigation
 
-The immediate focus is on **detailed profiling** of the inference pipeline to identify the specific bottlenecks within the detection and pose estimation stages. This involves:
+We have completed detailed profiling of the inference pipeline and identified specific bottlenecks within the detection and pose estimation stages:
 
-1. **Breaking down the inference process** into its constituent parts:
-   - Preprocessing (image preparation)
-   - ONNX session inference (actual model execution)
-   - Postprocessing (interpreting model outputs)
-   - Overhead (memory transfers, API calls)
+### Detection Stage (RTMDet) Findings
+- **Total time**: ~31-47ms per frame
+- **Preprocessing**: ~15-16ms (significant portion of detection time)
+- **Inference**: ~15-31ms (varies significantly)
+- **Postprocessing**: Minimal in most frames
 
-2. **Investigating ONNX Runtime warnings** about operations being assigned to CPU instead of GPU:
+### Pose Estimation Stage (RTMPose) Findings
+- **Total time**: ~31-47ms per frame (for all bounding boxes)
+- **Preprocessing**: ~0-3ms per bounding box (average)
+- **Inference**: ~6-9ms per bounding box (average)
+- **Postprocessing**: Minimal per bounding box
+- **Important insight**: The reported preprocessing, inference, and postprocessing times are averages per bounding box, while the total time is for all bounding boxes (typically 5)
+
+### Key Bottlenecks Identified
+1. **Sequential processing of bounding boxes** in pose estimation - each bounding box is processed one at a time
+2. **Detection preprocessing overhead** - takes ~15-16ms, a significant portion of detection time
+3. **ONNX Runtime operations** potentially being assigned to CPU instead of GPU:
    ```
    [W:onnxruntime:, session_state.cc:1168 onnxruntime::VerifyEachNodeIsAssignedToAnEp] Some nodes were not assigned to the preferred execution providers which may or may not have an negative impact on performance. e.g. ORT explicitly assigns shape related ops to CPU to improve perf.
    ```
+4. **Possible memory transfer inefficiencies** between CPU and GPU
 
-3. **Identifying "low-hanging fruit"** optimizations in preprocessing and postprocessing steps that may yield significant performance gains without requiring model changes.
+### Optimization Priorities
+Based on our findings, we've identified the following optimization priorities:
+1. **ONNX Runtime Optimization** - Configure session options for better performance
+2. **Detection Frequency Reduction** - Run detection less frequently
+3. **Preprocessing Optimization** - Improve image preprocessing operations
+4. **Memory Transfer Optimization** - Minimize CPU-GPU transfers
 
 ## Recent Changes
 
@@ -71,19 +87,36 @@ The immediate focus is on **detailed profiling** of the inference pipeline to id
 
 ### Immediate Tasks
 
-1. **Implement detailed profiling** within the detection and pose estimation processes:
-   - Add timing measurements for preprocessing steps
-   - Add timing measurements for ONNX session execution
-   - Add timing measurements for postprocessing steps
-   - Add timing measurements for memory transfers
-
-2. **Analyze ONNX model operations** to understand which operations are being assigned to CPU vs. GPU and why.
-
-3. **Experiment with ONNX Runtime session options** to optimize execution:
+1. **Implement ONNX Runtime optimization** with enhanced session options:
    ```python
+   import onnxruntime as ort
+   
+   # Create optimized session options
    options = ort.SessionOptions()
    options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+   options.enable_cpu_mem_arena = False  # Reduce memory usage
+   options.enable_mem_pattern = False    # May help with GPU memory fragmentation
+   options.intra_op_num_threads = 4      # Control CPU thread usage
+   
+   # Configure provider options for CUDA
+   provider_options = [{
+       'device_id': 0,
+       'arena_extend_strategy': 'kNextPowerOfTwo',
+       'gpu_mem_limit': 2 * 1024 * 1024 * 1024,  # 2GB
+       'cudnn_conv_algo_search': 'EXHAUSTIVE',
+       'do_copy_in_default_stream': True,
+   }]
+   
+   session = ort.InferenceSession(
+       path_or_bytes=onnx_model,
+       sess_options=options,
+       providers=[('CUDAExecutionProvider', provider_options), 'CPUExecutionProvider']
+   )
    ```
+
+2. **Measure the impact** of ONNX Runtime optimizations on performance.
+
+3. **Analyze remaining bottlenecks** after ONNX Runtime optimization.
 
 ### Short-term Optimization Strategies
 

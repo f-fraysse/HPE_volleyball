@@ -128,9 +128,9 @@
 ### 🟡 In Progress
 
 - ✅ Performance profiling
-- 🔄 Analyzing profiling results
-- 🔄 Identifying optimization opportunities
-- 🔄 Investigating ONNX Runtime warnings
+- ✅ Analyzing profiling results
+- ✅ Identifying optimization opportunities
+- 🔄 Implementing ONNX Runtime optimizations
 
 ### 🔴 Known Issues
 
@@ -152,26 +152,40 @@
 
 | Metric | Current Value | Target Value | Status |
 |--------|---------------|--------------|--------|
-| Detection Time | 40-110 ms | <20 ms | 🔴 Needs Improvement |
+| Detection Time | 31-47 ms | <20 ms | 🔴 Needs Improvement |
 | Tracking Time | ~1 ms | ~1 ms | 🟢 Optimal |
-| Pose Time | 40-75 ms | <20 ms | 🔴 Needs Improvement |
+| Pose Time | 31-47 ms (all bboxes) | <20 ms | 🔴 Needs Improvement |
 | Total FPS | ~5.4 | >15-20 | 🔴 Needs Improvement |
 | GPU Memory | Not measured | <8GB | 🟡 To Be Assessed |
 | CPU Usage | Not measured | <50% | 🟡 To Be Assessed |
 
 ## Next Milestone
 
-**Analyze Profiling Results and Implement Optimizations**
+**Implement ONNX Runtime Optimizations**
 
-- Analyze the detailed profiling data collected from CSV logs
-- Identify the specific bottlenecks in preprocessing, inference, and postprocessing
-- Prioritize optimization strategies based on profiling results
-- Implement the most promising optimizations
-- Measure the impact of each optimization
+We have analyzed the profiling results and identified key bottlenecks:
+
+1. **Detection Stage Findings**:
+   - Preprocessing: ~15-16ms (significant portion of detection time)
+   - Inference: ~15-31ms (varies significantly)
+   - Postprocessing: Minimal
+
+2. **Pose Estimation Stage Findings**:
+   - Sequential processing of bounding boxes is a major bottleneck
+   - Each bounding box takes ~6-9ms for inference
+   - With 5 bounding boxes, this adds up to ~31-47ms total
+
+3. **Optimization Priorities**:
+   - ONNX Runtime Optimization (current focus)
+   - Detection Frequency Reduction
+   - Preprocessing Optimization
+   - Memory Transfer Optimization
+
+**Current Task**: Implement ONNX Runtime optimization with enhanced session options
 
 **Target Completion**: TBD
 
 **Success Criteria**: 
-- Identification of at least 3 specific optimization opportunities with estimated impact
-- Implementation of at least 1 optimization strategy
-- Measurable improvement in overall processing speed
+- Implementation of ONNX Runtime optimizations
+- Measurable improvement in inference speed
+- Reduction in CPU-GPU transfer overhead
