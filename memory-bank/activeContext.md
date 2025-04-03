@@ -83,40 +83,79 @@ Based on our findings, we've identified the following optimization priorities:
    - Included the modified RTMlib in the project repository
    - Updated installation instructions in README.md
 
+## Recent Optimization Attempts
+
+We have attempted several optimization strategies with limited success:
+
+### 1. ONNX Runtime Optimization ✅
+
+We implemented enhanced session options for ONNX Runtime:
+
+```python
+import onnxruntime as ort
+
+# Create optimized session options
+options = ort.SessionOptions()
+options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+options.enable_cpu_mem_arena = False  # Reduce memory usage
+options.enable_mem_pattern = False    # May help with GPU memory fragmentation
+options.intra_op_num_threads = 4      # Control CPU thread usage
+
+# Configure provider options for CUDA
+provider_options = {
+    'device_id': 0,
+    'arena_extend_strategy': 'kNextPowerOfTwo',
+    'gpu_mem_limit': 2 * 1024 * 1024 * 1024,  # 2GB
+    'cudnn_conv_algo_search': 'EXHAUSTIVE',
+    'do_copy_in_default_stream': True,
+}
+
+session = ort.InferenceSession(
+    path_or_bytes=onnx_model,
+    sess_options=options,
+    providers=[('CUDAExecutionProvider', provider_options), 'CPUExecutionProvider']
+)
+```
+
+**Results:**
+- Very little impact on overall performance
+- Some improvements in minimum times but similar average performance
+- Higher variability in performance with occasional spikes
+- ONNX Runtime warning about Memcpy nodes persisted:
+  ```
+  [W:onnxruntime: transformer_memcpy.cc:74 onnxruntime::MemcpyTransformer::ApplyImpl] 2 Memcpy nodes are added to the graph torch-jit-export for CUDAExecutionProvider.
+  ```
+- This indicates some operations are still being executed on CPU rather than GPU
+
+### 2. Buffer Preallocation ✅
+
+We implemented buffer preallocation in preprocessing steps to reduce memory allocations:
+
+- Preallocated buffers for image resizing and preprocessing
+- Modified RTMPose to use preallocated buffers for input images
+- Attempted to minimize memory allocations during inference
+
+**Results:**
+- Minimal performance improvement
+- Potential introduction of bugs in the detection pipeline
+- No significant reduction in processing time
+
+### 3. Memory Transfer Optimization ✅
+
+We attempted to optimize memory transfers between CPU and GPU:
+
+- Corrected model input size parameters
+- Ensured proper memory layout for tensor operations
+- Minimized unnecessary data conversions
+
+**Results:**
+- No significant performance improvements
+- Potential issues with the detection pipeline
+- Memory transfer bottlenecks appear to be inherent to the ONNX Runtime implementation
+
 ## Next Steps
 
-### Immediate Tasks
-
-1. **Implement ONNX Runtime optimization** with enhanced session options:
-   ```python
-   import onnxruntime as ort
-   
-   # Create optimized session options
-   options = ort.SessionOptions()
-   options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
-   options.enable_cpu_mem_arena = False  # Reduce memory usage
-   options.enable_mem_pattern = False    # May help with GPU memory fragmentation
-   options.intra_op_num_threads = 4      # Control CPU thread usage
-   
-   # Configure provider options for CUDA
-   provider_options = [{
-       'device_id': 0,
-       'arena_extend_strategy': 'kNextPowerOfTwo',
-       'gpu_mem_limit': 2 * 1024 * 1024 * 1024,  # 2GB
-       'cudnn_conv_algo_search': 'EXHAUSTIVE',
-       'do_copy_in_default_stream': True,
-   }]
-   
-   session = ort.InferenceSession(
-       path_or_bytes=onnx_model,
-       sess_options=options,
-       providers=[('CUDAExecutionProvider', provider_options), 'CPUExecutionProvider']
-   )
-   ```
-
-2. **Measure the impact** of ONNX Runtime optimizations on performance.
-
-3. **Analyze remaining bottlenecks** after ONNX Runtime optimization.
+Based on our findings from these optimization attempts, we need to explore more substantial changes:
 
 ### Short-term Optimization Strategies
 

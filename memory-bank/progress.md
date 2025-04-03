@@ -130,7 +130,8 @@
 - ✅ Performance profiling
 - ✅ Analyzing profiling results
 - ✅ Identifying optimization opportunities
-- 🔄 Implementing ONNX Runtime optimizations
+- ✅ Implementing ONNX Runtime optimizations
+- 🔄 Evaluating alternative optimization strategies
 
 ### 🔴 Known Issues
 
@@ -161,31 +162,40 @@
 
 ## Next Milestone
 
-**Implement ONNX Runtime Optimizations**
+**Evaluate Alternative Optimization Strategies**
 
-We have analyzed the profiling results and identified key bottlenecks:
+We have implemented and tested several optimization approaches with limited success:
 
-1. **Detection Stage Findings**:
-   - Preprocessing: ~15-16ms (significant portion of detection time)
-   - Inference: ~15-31ms (varies significantly)
-   - Postprocessing: Minimal
+1. **ONNX Runtime Optimization Results** ✅:
+   - Implemented enhanced session options with maximum graph optimization
+   - Configured CUDA provider options for better performance
+   - Results showed minimal performance impact:
+     * Some improvements in minimum times but similar average performance
+     * Higher variability in performance with occasional spikes
+     * ONNX Runtime warning about Memcpy nodes persisted, indicating CPU-GPU transfers
 
-2. **Pose Estimation Stage Findings**:
-   - Sequential processing of bounding boxes is a major bottleneck
-   - Each bounding box takes ~6-9ms for inference
-   - With 5 bounding boxes, this adds up to ~31-47ms total
+2. **Buffer Preallocation Results** ✅:
+   - Implemented buffer preallocation in preprocessing steps
+   - Modified RTMPose to use preallocated buffers for input images
+   - Results showed minimal performance improvement
+   - Potential introduction of bugs in the detection pipeline
 
-3. **Optimization Priorities**:
-   - ONNX Runtime Optimization (current focus)
-   - Detection Frequency Reduction
-   - Preprocessing Optimization
-   - Memory Transfer Optimization
+3. **Memory Transfer Optimization Results** ✅:
+   - Corrected model input size parameters
+   - Ensured proper memory layout for tensor operations
+   - Results showed no significant performance improvements
+   - Memory transfer bottlenecks appear to be inherent to the ONNX Runtime implementation
 
-**Current Task**: Implement ONNX Runtime optimization with enhanced session options
+4. **Key Insights from Optimization Attempts**:
+   - Low-level optimizations (memory management, ONNX configuration) provided minimal benefits
+   - The bottlenecks may be more fundamental to the model architecture and ONNX Runtime
+   - More substantial changes to the pipeline architecture may be needed
+
+**Current Task**: Evaluate and implement more substantial optimization strategies
 
 **Target Completion**: TBD
 
 **Success Criteria**: 
-- Implementation of ONNX Runtime optimizations
-- Measurable improvement in inference speed
-- Reduction in CPU-GPU transfer overhead
+- Identification of a more effective optimization approach
+- Measurable improvement in overall processing speed
+- More consistent performance with lower variability
