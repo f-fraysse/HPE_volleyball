@@ -1,0 +1,109 @@
+# HPE_volleyball Project Intelligence
+
+This file captures important patterns, preferences, and project intelligence for the HPE_volleyball project. It serves as a learning journal to help work more effectively with this codebase.
+
+## Project Structure Patterns
+
+1. **Path Management**
+   - All file paths are defined relative to the project root in `paths.py`
+   - Always use these path constants rather than hardcoding paths
+   - Example: `from paths import MODEL_DIR, DATA_DIR, OUTPUT_VIDEO_DIR, OUTPUT_H5_DIR`
+
+2. **Configuration Pattern**
+   - Configuration parameters are defined at the top of `scripts/MAIN.py`
+   - Parameters include input/output file paths, model selections, and processing options
+   - Changes to the pipeline should maintain this configuration pattern
+
+3. **Output Organization**
+   - Visual outputs go to `/output/video/`
+   - Data outputs go to `/output/h5/`
+   - Output filenames should include model information (e.g., `det-M_pose-M`)
+
+## Code Patterns
+
+1. **Timing Measurements**
+   - Performance timing is measured using `time.time()` calls before and after operations
+   - Times are calculated in milliseconds: `(end_time - start_time) * 1000`
+   - Timing information is displayed on the output video
+
+2. **Frame Processing Loop**
+   - Main processing follows a sequential pattern:
+     1. Read frame
+     2. Detect players
+     3. Track players
+     4. Estimate poses
+     5. Save/display results
+   - This pattern should be maintained in optimizations
+
+3. **HDF5 Data Structure**
+   - Each frame gets its own group: `frame_group = h5file.create_group(f"frame_{frame_id:05d}")`
+   - Track presence is indexed separately for efficient retrieval
+   - Standard datasets per frame: track_ids, bboxes, bbox_scores, keypoints, keypoint_scores
+
+## Performance Patterns
+
+1. **Bottleneck Identification**
+   - Detection (~40-110ms) and pose estimation (~40-75ms) are the main bottlenecks
+   - Tracking is very efficient (~1ms) and not a bottleneck
+   - Similar performance across different GPU hardware suggests potential CPU bottleneck or memory transfer issues
+
+2. **ONNX Runtime Patterns**
+   - ONNX Runtime warnings indicate some operations are assigned to CPU instead of GPU
+   - This may cause unnecessary CPU-GPU transfers
+   - Investigating and optimizing these operations is a priority
+
+3. **Model Size vs. Performance**
+   - Medium-sized models (RTMDet-m, RTMPose-m) are currently used
+   - These provide a balance of accuracy and speed
+   - Smaller models could be tested if performance is critical
+
+## Development Workflow Preferences
+
+1. **Environment Management**
+   - Use conda environment `HPE_volleyball` for all development
+   - Python 3.10 is the target Python version
+   - All dependencies are listed in `requirements.txt`
+
+2. **Testing Approach**
+   - Test changes with the sample video in `/data/`
+   - Compare performance metrics before and after changes
+   - Verify visual output for accuracy
+
+3. **Performance Profiling**
+   - Add detailed timing measurements for components being optimized
+   - Log timing information to console for analysis
+   - Compare metrics across different hardware when possible
+
+## Critical Implementation Notes
+
+1. **RTMlib Modification**
+   - RTMlib's rtmdet.py requires modification to output bbox scores
+   - Line 141 must be changed from `return final_boxes` to `return final_boxes, final_scores`
+   - This modification is required for the tracking to work properly
+
+2. **ByteTrack Input Format**
+   - ByteTrack expects detections in format: `[x1, y1, x2, y2, score, class_id]`
+   - Class ID is set to 0 for all detections (only tracking people)
+   - Format conversion: `np.array([[*box, score, 0] for box, score in zip(det_bboxes, det_scores)])`
+
+3. **CUDA/cuDNN Setup**
+   - CUDA version must be compatible with GPU driver
+   - cuDNN version must be compatible with CUDA
+   - ONNX Runtime version must be compatible with both
+
+## Future Considerations
+
+1. **Action Recognition Integration**
+   - Future action recognition will analyze pose sequences over time
+   - Will need to maintain a buffer of pose data for temporal analysis
+   - Consider this when optimizing memory usage
+
+2. **Automated Pipeline**
+   - Future automated pipeline will need to monitor for new videos
+   - Consider file system monitoring approaches
+   - Design for background processing without user intervention
+
+3. **Deployment Considerations**
+   - Target users are volleyball coaches with limited technical knowledge
+   - Aim for simple interface and minimal setup requirements
+   - Consider packaging as standalone application
