@@ -18,7 +18,7 @@ ensure_output_dirs()
 # Video Paths
 record_output = False
 IN_VIDEO_FILE = 'SAMPLE_17_01_2025_C2_S1.mp4'
-OUT_VIDEO_FILE = 'SAMPLE_det-X_pose-M_track-0508_Body26.mp4'
+OUT_VIDEO_FILE = 'SAMPLE_det-M_pose-M_track-0508_Body26.mp4'
 resize_output = False
 resize_width = 960
 resize_height = 540
@@ -56,14 +56,16 @@ with open(log_file, 'w', newline='') as f:
 det_timing_stats = {
     'total': [],
     'preprocess': [],
-    'inference': [],
+    'prep': [],
+    'model': [],
     'postprocess': []
 }
 
 pose_timing_stats = {
     'total': [],
     'preprocess': [],
-    'inference': [],
+    'prep': [],
+    'model': [],
     'postprocess': []
 }
 
