@@ -24,7 +24,7 @@ class RTMPose(BaseTool):
     def __call__(self, image: np.ndarray, bboxes: list = []):
         # Add timing for the entire pose estimation process
         import time
-        total_start = time.time()
+        total_start = time.perf_counter()
         
         if len(bboxes) == 0:
             bboxes = [[0, 0, image.shape[1], image.shape[0]]]
@@ -38,21 +38,21 @@ class RTMPose(BaseTool):
         
         for bbox in bboxes:
             # Preprocessing timing
-            preprocess_start = time.time()
+            preprocess_start = time.perf_counter()
             img, center, scale = self.preprocess(image, bbox)
-            preprocess_time = (time.time() - preprocess_start) * 1000
+            preprocess_time = (time.perf_counter() - preprocess_start) * 1000
             preprocess_times.append(preprocess_time)
             
             # Inference timing
-            inference_start = time.time()
+            inference_start = time.perf_counter()
             outputs = self.inference(img)
-            inference_time = (time.time() - inference_start) * 1000
+            inference_time = (time.perf_counter() - inference_start) * 1000
             inference_times.append(inference_time)
             
             # Postprocessing timing
-            postprocess_start = time.time()
+            postprocess_start = time.perf_counter()
             kpts, score = self.postprocess(outputs, center, scale)
-            postprocess_time = (time.time() - postprocess_start) * 1000
+            postprocess_time = (time.perf_counter() - postprocess_start) * 1000
             postprocess_times.append(postprocess_time)
 
             keypoints.append(kpts)
@@ -64,7 +64,7 @@ class RTMPose(BaseTool):
         if self.to_openpose:
             keypoints, scores = convert_coco_to_openpose(keypoints, scores)
         
-        total_time = (time.time() - total_start) * 1000
+        total_time = (time.perf_counter() - total_start) * 1000
         
         # Calculate average times if multiple bboxes were processed
         avg_preprocess = sum(preprocess_times) / len(preprocess_times) if preprocess_times else 0

@@ -25,10 +25,36 @@ class YOLOX(BaseTool):
         self.score_thr = score_thr
 
     def __call__(self, image: np.ndarray):
+        import time
+        total_start = time.perf_counter()
+        
+        # Preprocessing timing
+        preprocess_start = time.perf_counter()
         image, ratio = self.preprocess(image)
+        preprocess_time = (time.perf_counter() - preprocess_start) * 1000
+        
+        # Inference timing
+        inference_start = time.perf_counter()
         outputs = self.inference(image)[0]
+        inference_time = (time.perf_counter() - inference_start) * 1000
+        
+        # Postprocessing timing
+        postprocess_start = time.perf_counter()
         results = self.postprocess(outputs, ratio)
-        return results
+        postprocess_time = (time.perf_counter() - postprocess_start) * 1000
+        
+        total_time = (time.perf_counter() - total_start) * 1000
+        
+        # Store timing information in a dictionary
+        timing_info = {
+            'total': total_time,
+            'preprocess': preprocess_time,
+            'inference': inference_time,
+            'postprocess': postprocess_time
+        }
+        
+        # Return results along with timing information
+        return results, timing_info
 
     def preprocess(self, img: np.ndarray):
         """Do preprocessing for RTMPose model inference.
@@ -132,4 +158,4 @@ class YOLOX(BaseTool):
             isbbox = [i for i in isscore]
             final_boxes = final_boxes[isbbox]
 
-        return final_boxes
+        return final_boxes, final_scores

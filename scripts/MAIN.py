@@ -2,12 +2,13 @@ import h5py
 import cv2
 import os
 import time
+# from time import perf_counter
 import numpy as np
 import csv
 from datetime import datetime
 from pathlib import Path
 from argparse import Namespace
-from rtmlib import RTMDet, RTMPose, draw_skeleton
+from rtmlib import RTMDet, RTMPose, YOLOX, draw_skeleton
 from yolox.tracker.byte_tracker import BYTETracker
 from paths import MODEL_DIR, DATA_DIR, OUTPUT_VIDEO_DIR, OUTPUT_H5_DIR, ensure_output_dirs
 
@@ -15,9 +16,9 @@ ensure_output_dirs()
 
 #---------- CONFIGURATION ------------------
 # Video Paths
-record_output = False
+record_output = True
 IN_VIDEO_FILE = 'SAMPLE_17_01_2025_C2_S1.mp4'
-OUT_VIDEO_FILE = 'SAMPLE_det-M_pose-M_track-0508_Body26.mp4'
+OUT_VIDEO_FILE = 'SAMPLE_yolo-M_pose-M_track-0508_Body26.mp4'
 resize_output = False
 resize_width = 960
 resize_height = 540
@@ -27,7 +28,7 @@ record_results = False
 OUT_H5_FILE = "SAMPLE2_det-M_pose-M_track-0508.h5"
 
 # Detection and tracking models
-RTMDET_MODEL = 'rtmdet-m-640.onnx'
+RTMDET_MODEL = 'yolox-m-640.onnx'
 RTMPOSE_MODEL = 'rtmpose-m-256-192_26k.onnx'
 
 # RTMPose engine
@@ -93,7 +94,14 @@ if record_output:
         out = cv2.VideoWriter(OUT_VIDEO_FILE, fourcc, fps, (width, height))
 
 # Init detector
-detector = RTMDet(
+# detector = RTMDet(
+#     onnx_model=RTMDET_MODEL,
+#     model_input_size=(640, 640),
+#     backend=backend,
+#     device=device
+# )
+
+detector = YOLOX(
     onnx_model=RTMDET_MODEL,
     model_input_size=(640, 640),
     backend=backend,
@@ -102,7 +110,7 @@ detector = RTMDet(
 
 # Init ByteTrack tracker
 args = Namespace(
-    track_thresh=0.5,
+    track_thresh=0.72,
     match_thresh=0.8,
     track_buffer=60,
     frame_rate=fps,
@@ -123,17 +131,17 @@ frame_id = 0
 global_start = time.time()
 while cap.isOpened():
 
-    start_time = time.time()
+    start_time = time.perf_counter()
     success, frame = cap.read()
     if not success:
         break
     frame_id += 1
-    cap_time = time.time()
+    cap_time = time.perf_counter()
 
     # Step 1: Detection with timing
     det_bboxes_scores, det_timing = detector(frame)  # [x1, y1, x2, y2, conf]
     det_bboxes, det_scores = det_bboxes_scores
-    det_time = time.time() 
+    det_time = time.perf_counter() 
     
     # Update detection timing statistics
     for key in det_timing:
@@ -148,7 +156,7 @@ while cap.isOpened():
     
     # Step 3: Tracking
     tracks = tracker.update(dets_for_tracker, [height, width], (height, width))
-    track_time = time.time()
+    track_time = time.perf_counter()
 
     # Step 4: Pose estimation (keypoints)
     img_show = frame.copy()    
@@ -186,7 +194,7 @@ while cap.isOpened():
     else:
         keypoints_list, scores_list = [], []
         
-    pose_time = time.time()
+    pose_time = time.perf_counter()
 
     # Build the HDF5 file
     if record_results:
@@ -209,7 +217,7 @@ while cap.isOpened():
                 track_id_index[tid] = []
             track_id_index[tid].append(frame_id)
     
-    hdf_time = time.time()
+    hdf_time = time.perf_counter()
 
     # ---DRAWING
     # Draw skeletons
@@ -236,7 +244,7 @@ while cap.isOpened():
                             cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
         
     # Timing info
-    disp_time = time.time()
+    disp_time = time.perf_counter()
     cap_duration = (cap_time - start_time) * 1000
     det_duration = (det_time - cap_time) * 1000
     track_duration = (track_time - det_time) * 1000
@@ -258,12 +266,12 @@ while cap.isOpened():
     
 
     img_show = cv2.putText(img_show, f'Volleyball Action Detection - FRANCOIS FRAYSSE @ UNISA', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 127, 0), 2)
-    img_show = cv2.putText(img_show, f'cap: {cap_duration: .2f} ms', (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-    img_show = cv2.putText(img_show, f'det: {det_duration: .2f} ms', (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-    img_show = cv2.putText(img_show, f'track: {track_duration: .2f} ms', (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-    img_show = cv2.putText(img_show, f'pose: {pose_duration: .2f} ms', (10, 110), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-    img_show = cv2.putText(img_show, f'hdf5: {hdf5_duration: .2f} ms', (10, 130), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-    img_show = cv2.putText(img_show, f'disp: {disp_duration: .2f} ms', (10, 150), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+    img_show = cv2.putText(img_show, f'cap: {cap_duration: .1f} ms', (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+    img_show = cv2.putText(img_show, f'det: {det_duration: .1f} ms', (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+    img_show = cv2.putText(img_show, f'track: {track_duration: .1f} ms', (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+    img_show = cv2.putText(img_show, f'pose: {pose_duration: .1f} ms', (10, 110), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+    img_show = cv2.putText(img_show, f'hdf5: {hdf5_duration: .1f} ms', (10, 130), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+    img_show = cv2.putText(img_show, f'disp: {disp_duration: .1f} ms', (10, 150), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
     # Resize & show
     if resize_output:
@@ -296,13 +304,13 @@ print(f"total time: {(finish_time - global_start):.1f} seconds")
 # Print summary statistics
 print("\n===== DETECTION TIMING STATISTICS =====")
 for key in det_timing_stats:
-    times = det_timing_stats[key]
+    times = det_timing_stats[key][1:]
     if times:
         print(f"{key}: min={min(times):.2f}ms, max={max(times):.2f}ms, avg={sum(times)/len(times):.2f}ms, median={sorted(times)[len(times)//2]:.2f}ms")
 
 print("\n===== POSE ESTIMATION TIMING STATISTICS =====")
 for key in pose_timing_stats:
-    times = pose_timing_stats[key]
+    times = pose_timing_stats[key][1:]
     if times:
         print(f"{key}: min={min(times):.2f}ms, max={max(times):.2f}ms, avg={sum(times)/len(times):.2f}ms, median={sorted(times)[len(times)//2]:.2f}ms")
 
