@@ -24,6 +24,7 @@ Running ONNXruntime backend - CUDA Execution Provider, on GTX 1070Ti<br>
 RTMDet-m and RTMPose-m<br>
 video is 1080p 50FPS<br>
 Total processing speed approx. 12 FPS (90ms per frame) which is not usable (videos are 2 hours)<br>
+I know I could batch process but also want to investigate potential real time applications<br>
 
 #### 1. Changing backend from ONNX to TensorRT
 In theory TRT provides great speedup especially running FP16 models.<br>
