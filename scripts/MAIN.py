@@ -28,7 +28,7 @@ record_results = False
 OUT_H5_FILE = "SAMPLE2_det-M_pose-M_track-0508.h5"
 
 # Detection and tracking models
-RTMDET_MODEL = 'rtmdet-x-640.onnx'
+RTMDET_MODEL = 'rtmdet-m-640.onnx'
 RTMPOSE_MODEL = 'rtmpose-m-256-192_26k.onnx'
 
 # RTMPose engine
@@ -46,9 +46,9 @@ log_file = os.path.join(log_dir, f"profiling_{timestamp}.csv")
 with open(log_file, 'w', newline='') as f:
     writer = csv.writer(f)
     writer.writerow([
-        'frame_id', 
-        'det_total', 'det_preprocess', 'det_inference', 'det_postprocess',
-        'pose_total', 'pose_preprocess', 'pose_inference', 'pose_postprocess', 'pose_num_bboxes',
+        'frame_id',
+        'det_total', 'det_preprocess', 'det_prep', 'det_model', 'det_postprocess',
+        'pose_total', 'pose_preprocess', 'pose_prep', 'pose_model', 'pose_postprocess', 'pose_num_bboxes',
         'cap_time', 'track_time', 'hdf5_time', 'disp_time', 'total_frame_time'
     ])
 
@@ -179,7 +179,8 @@ while cap.isOpened():
     pose_timing = {
         'total': 0,
         'preprocess': 0,
-        'inference': 0,
+        'prep': 0,
+        'model': 0,
         'postprocess': 0,
         'num_bboxes': 0
     }
@@ -258,8 +259,8 @@ while cap.isOpened():
         writer = csv.writer(f)
         writer.writerow([
             frame_id,
-            det_timing['total'], det_timing['preprocess'], det_timing['inference'], det_timing['postprocess'],
-            pose_timing['total'], pose_timing['preprocess'], pose_timing['inference'], pose_timing['postprocess'], 
+            det_timing['total'], det_timing['preprocess'], det_timing['prep'], det_timing['model'], det_timing['postprocess'],
+            pose_timing['total'], pose_timing['preprocess'], pose_timing['prep'], pose_timing['model'], pose_timing['postprocess'],
             pose_timing['num_bboxes'],
             cap_duration, track_duration, hdf5_duration, disp_duration, total_frame_time
         ])

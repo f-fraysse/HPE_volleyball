@@ -79,7 +79,8 @@ class RTMPose(BaseTool):
         timing_info = {
             'total': total_time,
             'preprocess': avg_preprocess,
-            'inference': avg_inference,
+            'prep': self._last_inference_timing['prep'],
+            'model': self._last_inference_timing['model'],
             'postprocess': avg_postprocess,
             'num_bboxes': len(bboxes)
         }

@@ -2,6 +2,7 @@ import os
 from abc import ABCMeta, abstractmethod
 from typing import Any
 
+import time
 import cv2
 import numpy as np
 
@@ -62,6 +63,7 @@ class BaseTool(metaclass=ABCMeta):
             import onnxruntime as ort
             providers = RTMLIB_SETTINGS[backend][device]
 
+            # original session creation
             self.session = ort.InferenceSession(path_or_bytes=onnx_model,
                                                 providers=[providers])
 
@@ -107,14 +109,15 @@ class BaseTool(metaclass=ABCMeta):
 
         Returns:
             outputs (np.ndarray): Output of RTMPose model.
-        """
-        import time
+        """       
         
         # Timing for input preparation
-        prep_start = time.time()
+        prep_start = time.time()  
+
         img = img.transpose(2, 0, 1)
         img = np.ascontiguousarray(img, dtype=np.float32)
         input = img[None, :, :, :]
+        # input preparation time
         prep_time = (time.time() - prep_start) * 1000
         
         # Timing for actual model execution

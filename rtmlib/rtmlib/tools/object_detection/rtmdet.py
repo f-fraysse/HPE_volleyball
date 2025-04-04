@@ -52,7 +52,8 @@ class RTMDet(BaseTool):
         timing_info = {
             'total': total_time,
             'preprocess': preprocess_time,
-            'inference': inference_time,
+            'prep': self._last_inference_timing['prep'],
+            'model': self._last_inference_timing['model'],
             'postprocess': postprocess_time
         }
         
