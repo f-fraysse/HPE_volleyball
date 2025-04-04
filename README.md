@@ -19,29 +19,29 @@ https://github.com/user-attachments/assets/3a20771c-83d7-40c8-b43a-f9a36d718dc5
 
 ## 📁 updates
 
-2025/04/04: optimisations
-Running ONNXruntime backend - CUDA Execution Provider, on GTX 1070Ti
-RTMDet-m and RTMPose-m
-video is 1080p 50FPS
-Total processing speed approx. 12 FPS (90ms per frame) which is not usable (videos are 2 hours)
+2025/04/04: optimisations<br>
+Running ONNXruntime backend - CUDA Execution Provider, on GTX 1070Ti<br>
+RTMDet-m and RTMPose-m<br>
+video is 1080p 50FPS<br>
+Total processing speed approx. 12 FPS (90ms per frame) which is not usable (videos are 2 hours)<br>
 
 ### 1. Changing backend from ONNX to TensorRT
-In theory TRT provides great speedup especially running FP16 models.
-Wasted many hours trying this.
-The easiest would be not to use RTMlib but instead mmdeploy-runtime with a TRT engine.
-However MMdeploy supports TRT 8.x (CUDA 11.8 - CudNN 9.7)
-GPUs older than Turing (i.e. before RTX 20) do not have tensor cores so do not benefit from FP16 -> gains from TRT FP32 not so big
-GPUs newer than Ada (i.e. after RTX 40) are not supported by TRT 8.x (they need TRT 10.x and CUDA 12.8 which MMdeploy doesn't support)
--> in practice, using MMdeploy-SDK (mmdeploy-runtime) with TRT models is only possible with Turing-Ampere-Ada (20, 30, 40 series)
-Let's hope MMDeploy team has time to update/maintain again someday as it would be a shame to see that project deprecate.
-We are staying on ONNX for now.
+In theory TRT provides great speedup especially running FP16 models.<br>
+Wasted many hours trying this.<br>
+The easiest would be not to use RTMlib but instead mmdeploy-runtime with a TRT engine.<br>
+However MMdeploy supports TRT 8.x (CUDA 11.8 - CudNN 9.7)<br>
+GPUs older than Turing (i.e. before RTX 20) do not have tensor cores so do not benefit from FP16 -> gains from TRT FP32 not so big<br>
+GPUs newer than Ada (i.e. after RTX 40) are not supported by TRT 8.x (they need TRT 10.x and CUDA 12.8 which MMdeploy doesn't support)<br>
+-> in practice, using MMdeploy-SDK (mmdeploy-runtime) with TRT models is only possible with Turing-Ampere-Ada (20, 30, 40 series)<br>
+Let's hope MMDeploy team has time to update/maintain again someday as it would be a shame to see that project deprecate.<br>
+We are staying on ONNX for now.<br>
 
 ### 2. profiling the script (capture frame -> detection -> tracking -> pose -> export)
-Almost all time is spent in detection and pose (45ms det / 45ms pose)
-In both RTMdet and RTMpose, preprocessing the frame before inference (normalisation) is significant time cost
-I have rewritten the normalisation step. See [notes here](misc project docs/optimising_preprocessing_normalisation.md)
--> saved approx 8ms off det and 5ms off pose
--> total time for 600 frames went from 47 to 31 seconds (50% speedup)
+Almost all time is spent in detection and pose (45ms det / 45ms pose)<br>
+In both RTMdet and RTMpose, preprocessing the frame before inference (normalisation) is significant time cost<br>
+I have rewritten the normalisation step. See [notes here](misc project docs/optimising_preprocessing_normalisation.md)<br>
+-> saved approx 8ms off det and 5ms off pose<br>
+-> total time for 600 frames went from 47 to 31 seconds (50% speedup)<br>
 
 
 ## 📁 Project Structure
