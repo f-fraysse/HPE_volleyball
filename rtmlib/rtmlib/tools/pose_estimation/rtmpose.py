@@ -110,10 +110,6 @@ class RTMPose(BaseTool):
                                              center, img)
         # normalize image
         if self.mean is not None:
-            # self.mean = np.array(self.mean)
-            # self.std = np.array(self.std)
-            # resized_img = (resized_img - self.mean) / self.std
-
             #normalise with openCV - 2x faster
             resized_img = resized_img.astype(np.float32, copy=False)
             cv2.subtract(resized_img, self.mean, dst=resized_img)
