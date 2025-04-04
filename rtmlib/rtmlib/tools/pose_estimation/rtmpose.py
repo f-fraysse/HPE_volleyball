@@ -1,5 +1,6 @@
 from typing import List, Tuple
 
+import cv2
 import numpy as np
 
 from ..base import BaseTool
@@ -20,6 +21,9 @@ class RTMPose(BaseTool):
         super().__init__(onnx_model, model_input_size, mean, std, backend,
                          device)
         self.to_openpose = to_openpose
+
+        self.mean = np.array(mean, dtype=np.float32)
+        self.std = np.array(std, dtype=np.float32)
 
     def __call__(self, image: np.ndarray, bboxes: list = []):
         # Add timing for the entire pose estimation process
@@ -106,9 +110,14 @@ class RTMPose(BaseTool):
                                              center, img)
         # normalize image
         if self.mean is not None:
-            self.mean = np.array(self.mean)
-            self.std = np.array(self.std)
-            resized_img = (resized_img - self.mean) / self.std
+            # self.mean = np.array(self.mean)
+            # self.std = np.array(self.std)
+            # resized_img = (resized_img - self.mean) / self.std
+
+            #normalise with openCV - 2x faster
+            resized_img = resized_img.astype(np.float32, copy=False)
+            cv2.subtract(resized_img, self.mean, dst=resized_img)
+            cv2.divide(resized_img, self.std, dst=resized_img)
 
         return resized_img, center, scale
 

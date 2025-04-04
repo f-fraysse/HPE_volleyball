@@ -16,7 +16,7 @@ ensure_output_dirs()
 
 #---------- CONFIGURATION ------------------
 # Video Paths
-record_output = True
+record_output = False
 IN_VIDEO_FILE = 'SAMPLE_17_01_2025_C2_S1.mp4'
 OUT_VIDEO_FILE = 'SAMPLE_yolo-M_pose-M_track-0508_Body26.mp4'
 resize_output = False
@@ -28,7 +28,7 @@ record_results = False
 OUT_H5_FILE = "SAMPLE2_det-M_pose-M_track-0508.h5"
 
 # Detection and tracking models
-RTMDET_MODEL = 'yolox-m-640.onnx'
+RTMDET_MODEL = 'rtmdet-m-640.onnx'
 RTMPOSE_MODEL = 'rtmpose-m-256-192_26k.onnx'
 
 # RTMPose engine
@@ -94,23 +94,23 @@ if record_output:
         out = cv2.VideoWriter(OUT_VIDEO_FILE, fourcc, fps, (width, height))
 
 # Init detector
-# detector = RTMDet(
-#     onnx_model=RTMDET_MODEL,
-#     model_input_size=(640, 640),
-#     backend=backend,
-#     device=device
-# )
-
-detector = YOLOX(
+detector = RTMDet(
     onnx_model=RTMDET_MODEL,
     model_input_size=(640, 640),
     backend=backend,
     device=device
 )
 
+# detector = YOLOX(
+#     onnx_model=RTMDET_MODEL,
+#     model_input_size=(640, 640),
+#     backend=backend,
+#     device=device
+# )
+
 # Init ByteTrack tracker
 args = Namespace(
-    track_thresh=0.72,
+    track_thresh=0.5,
     match_thresh=0.8,
     track_buffer=60,
     frame_rate=fps,

@@ -22,6 +22,12 @@ class RTMDet(BaseTool):
                          std,
                          backend=backend,
                          device=device)
+        
+        if self.mean is not None:
+            # self.mean = np.array(self.mean, dtype=np.float32).reshape((1, 1, 3))
+            # self.std = np.array(self.std, dtype=np.float32).reshape((1, 1, 3))
+            self.mean = np.array(mean, dtype=np.float32)
+            self.std = np.array(std, dtype=np.float32)
 
     def __call__(self, image: np.ndarray):
         import time
@@ -86,9 +92,21 @@ class RTMDet(BaseTool):
 
         # normalize image
         if self.mean is not None:
-            self.mean = np.array(self.mean)
-            self.std = np.array(self.std)
-            padded_img = (padded_img - self.mean) / self.std
+        # base method
+        #     self.mean = np.array(self.mean)
+        #     self.std = np.array(self.std)
+        #     padded_img = (padded_img - self.mean) / self.std
+
+        # in place normalisation - gain = 5ms (12ms -> 7ms)
+            # padded_img = padded_img.astype(np.float32, copy=False)
+            # padded_img -= self.mean
+            # padded_img /= self.std
+        
+        #try use cv2
+            padded_img = padded_img.astype(np.float32, copy=False)
+            cv2.subtract(padded_img, self.mean, dst=padded_img)
+            cv2.divide(padded_img, self.std, dst=padded_img)
+
 
         return padded_img, ratio
 
