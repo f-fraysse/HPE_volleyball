@@ -18,7 +18,7 @@ ensure_output_dirs()
 # Video Paths
 record_output = False
 IN_VIDEO_FILE = 'SAMPLE_17_01_2025_C2_S1.mp4'
-OUT_VIDEO_FILE = 'SAMPLE_yolo-M_pose-M_track-0508_Body26.mp4'
+OUT_VIDEO_FILE = 'SAMPLE_det-X_pose-M_track-0508_Body26.mp4'
 resize_output = False
 resize_width = 960
 resize_height = 540
@@ -28,7 +28,7 @@ record_results = False
 OUT_H5_FILE = "SAMPLE2_det-M_pose-M_track-0508.h5"
 
 # Detection and tracking models
-RTMDET_MODEL = 'rtmdet-m-640.onnx'
+RTMDET_MODEL = 'rtmdet-x-640.onnx'
 RTMPOSE_MODEL = 'rtmpose-m-256-192_26k.onnx'
 
 # RTMPose engine

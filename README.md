@@ -15,7 +15,7 @@ This project combines object detection, multi-object tracking, and pose estimati
 
 ## 🎥 Demo
 
-https://github.com/user-attachments/assets/3a20771c-83d7-40c8-b43a-f9a36d718dc5
+https://github.com/user-attachments/assets/ff8d3e84-efd6-40c7-bcdf-7e803216a152
 
 ## 📁 updates
 
