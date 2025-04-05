@@ -75,6 +75,7 @@ Focus remains on performance, but the primary bottleneck has shifted slightly.
 
 9. **Changed RTMlib handling** (remains active).
 10. **Reverted Detection Frequency Reduction**: Restored `scripts/MAIN.py` to run detection every frame due to tracking accuracy issues observed with infrequent detection.
+11. **Refactored Performance Profiling**: Cleaned up timing measurements in `scripts/MAIN.py`, added specific timings for CSV writing and final display steps, updated on-screen/CSV/terminal outputs for clarity and consistency (including tab alignment and first-frame exclusion for stats).
 
 ## Next Steps
 

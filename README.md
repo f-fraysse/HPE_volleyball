@@ -19,6 +19,15 @@ https://github.com/user-attachments/assets/ff8d3e84-efd6-40c7-bcdf-7e803216a152
 
 ## 📁 updates
 
+### 2025/04/05: Profiling Cleanup & Detection Frequency Revert<br>
+1.  **Detection Frequency Experiment**: Attempted running detection every N frames (e.g., every 3 frames) to improve performance. However, this significantly degraded tracking accuracy (lost tracks, ID switches) due to the rapid and unpredictable movement of players in volleyball. Reverted to running detection on every frame to maintain tracking robustness.
+2.  **Profiling Refactoring**: Cleaned up and enhanced the performance profiling in `scripts/MAIN.py`.
+    *   Added distinct timing measurements for all major steps within the main loop (Capture, Detection, Tracking, Pose Estimation, HDF5 Write, Display Prep, CSV Write, Final Draw/Display).
+    *   Updated on-screen display to show all component times and total FPS.
+    *   Updated CSV logging to include all component times.
+    *   Added a new "OVERALL TIMING STATISTICS" section to the terminal output, summarizing min/max/avg/median for each component (excluding the first frame).
+    *   Formatted all terminal statistics output for better readability using tab alignment.
+
 ### 2025/04/05: Batch Pose Estimation<br>
 Implemented batch processing for RTMPose estimation.<br>
 Previously, each detected bounding box was processed sequentially (preprocess, inference, postprocess).<br>

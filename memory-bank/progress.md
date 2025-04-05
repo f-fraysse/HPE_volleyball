@@ -79,7 +79,13 @@
    - Encountered tracking accuracy issues (flickering, lost tracks).
    - Reverted `scripts/MAIN.py` to run detection every frame for robustness.
 
-6. **Implementation of Further Optimization Strategies** 🔄
+6. **Profiling Refactoring** ✅
+   - Cleaned up timing measurements in `scripts/MAIN.py`.
+   - Added specific timings for CSV write and final display steps.
+   - Updated on-screen/CSV/terminal outputs for clarity and consistency.
+   - Ensured terminal statistics exclude the first frame and use tab alignment.
+
+7. **Implementation of Further Optimization Strategies** 🔄
    - Explore GPU accelerated capture/preprocessing - **Next Priority**
    - Explore Model Quantization (FP16/INT8)
    - Further minor detection optimization (Low priority)
@@ -168,9 +174,9 @@
 
 **Explore Further Optimization Strategies (GPU Preprocessing / Quantization)**
 
-**Previous Milestone:** Revert Detection Frequency Reduction ✅
-- Restored `scripts/MAIN.py` to run detection every frame.
-- Updated Memory Bank documentation.
+**Previous Milestone:** Profiling Refactoring & Documentation Update ✅
+- Refactored performance profiling in `scripts/MAIN.py`.
+- Updated `README.md` and Memory Bank (`activeContext.md`, `progress.md`).
 
 **Current Task**: Investigate alternative optimization methods like GPU-accelerated preprocessing or model quantization to reach the 50 FPS target.
 
