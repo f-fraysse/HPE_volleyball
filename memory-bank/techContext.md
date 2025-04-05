@@ -9,19 +9,24 @@
    - State-of-the-art models for object detection and pose estimation
    - Accessed through RTMlib Python package
 
-2. **ByteTrack**
+2. **Ultralytics YOLO (Alternative Implementation)**
+   - YOLOv8/YOLO11 models for object detection and pose estimation
+   - Python API for easy integration
+   - Explored as an alternative to RTMDet/RTMPose
+
+3. **ByteTrack**
    - State-of-the-art multi-object tracking algorithm
    - Modified version included in the project repository
 
-3. **ONNX Runtime**
+4. **ONNX Runtime**
    - Cross-platform inference engine for ONNX models
    - Used with CUDA backend for GPU acceleration
 
-4. **OpenCV (cv2)**
+5. **OpenCV (cv2)**
    - Used for video I/O, image processing, and visualization
    - Handles frame extraction and output video generation
 
-5. **HDF5 (h5py)**
+6. **HDF5 (h5py)**
    - Hierarchical data format for storing structured numerical data
    - Used to store detection, tracking, and pose results
 
@@ -93,6 +98,7 @@ HPE_volleyball/
    - CUDA version must be compatible with GPU driver
    - ONNX Runtime must be compatible with CUDA version
    - cuDNN version must be compatible with CUDA
+   - **RTX 5070 GPU Compatibility Issue**: The development machine's RTX 5070 has CUDA capability sm_120, but current PyTorch builds only support up to sm_90, limiting GPU acceleration options
 
 2. **ONNX Runtime Limitations**
    - Some operations may be assigned to CPU instead of GPU
@@ -104,6 +110,11 @@ HPE_volleyball/
    - Modified to output bbox scores for tracking
    - Installed in development mode for easy modification
    - Modified `RTMPose` and `BaseTool` for batch pose estimation
+
+4. **YOLO Implementation Limitations**
+   - Alternative YOLO-based implementation significantly slower than RTMDet/RTMPose (~1.9 FPS vs. ~26 FPS)
+   - TensorRT acceleration attempts failed due to GPU compatibility issues
+   - Per-person pose estimation approach was even slower (0.7 FPS) than whole-frame approach
 
 ### Performance Constraints
 

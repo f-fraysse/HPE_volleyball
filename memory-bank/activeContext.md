@@ -4,6 +4,8 @@
 
 The current focus of the HPE_volleyball project is **performance optimization** of the inference pipeline. While the detection-tracking-pose pipeline is functionally complete and produces accurate results, the processing speed needs significant improvement to make the system more practical for real-world use.
 
+In addition to optimizing the existing RTMDet/RTMPose pipeline, we are also exploring an **alternative implementation using Ultralytics YOLO models** for detection, tracking, and pose estimation.
+
 ### Primary Optimization Goal
 
 Increase the processing speed to **50 FPS (20ms total time per frame)** on the lab PC (RTX 4060) for potential real-time applications.
@@ -85,9 +87,42 @@ With the detection frequency experiment reverted, the next logical steps focus o
 2.  **Further Detection Optimization**: Re-examine RTMDet preprocessing/postprocessing for any remaining minor optimization opportunities (Low priority).
 3.  **Model Quantization**: Explore using FP16 or INT8 versions of the RTMDet/RTMPose models if available, assessing performance vs. accuracy.
 
+## YOLO Implementation Exploration
+
+As an alternative to the RTMDet/RTMPose pipeline, we've been exploring an implementation using Ultralytics YOLO models:
+
+### Implementation Status
+- Created `scripts/MAIN_YOLO.py` that follows the same pipeline structure as `scripts/MAIN.py`
+- Implemented detection using YOLOv8/YOLO11 models
+- Integrated ByteTrack for tracking (same as the RTM pipeline)
+- Implemented pose estimation using YOLOv8/YOLO11-pose models
+- Added visualization and performance profiling
+
+### Performance Findings
+- Initial YOLO implementation is significantly slower (~1.9 FPS) than the RTMDet+RTMPose implementation (~26 FPS)
+- Attempted per-person pose estimation approach was even slower (0.7 FPS)
+- Reverted to whole-frame pose estimation approach
+
+### GPU Compatibility Issues
+- Discovered that the RTX 5070 GPU has CUDA capability sm_120
+- Current PyTorch builds only support up to sm_90
+- This explains why PyTorch can't properly utilize the GPU
+- TensorRT acceleration attempts failed due to this compatibility issue
+
+### Implications
+- The newer GPU architecture (Blackwell or very new Ampere/Ada Lovelace) is ahead of current stable PyTorch releases
+- This limits our ability to fully leverage GPU acceleration with current PyTorch/CUDA tools
+- Options include:
+  - Continue with RTMDet/RTMPose (already achieving ~26 FPS)
+  - CPU-based YOLO (slower)
+  - ONNX Format for potential acceleration
+  - PyTorch Nightly Builds that might support sm_120
+
 ## Current Questions and Considerations
 
 1.  **GPU Preprocessing Benefit**: How much performance gain can be realistically achieved by moving video decoding and/or preprocessing to the GPU?
 2.  **FP16/INT8 Accuracy Impact**: How much does lower-precision quantization affect the accuracy of RTMDet and RTMPose for this specific volleyball task? Are pre-quantized models available?
 3.  **ONNX CPU Ops Impact**: Are the operations running on the CPU (as indicated by warnings) actually impacting performance significantly, or are they minor shape/metadata operations as ONNX Runtime suggests? Can they be forced to GPU?
 4.  **Hardware Bottlenecks**: With the current ~26 FPS (running detection every frame), how much further can we push performance on the RTX 4060 towards the 50 FPS goal using other techniques?
+5.  **YOLO vs. RTM Trade-offs**: Is there any benefit to continuing the YOLO implementation given the current performance gap and GPU compatibility issues?
+6.  **PyTorch Compatibility**: When will stable PyTorch releases support newer GPU architectures like the RTX 5070's sm_120?

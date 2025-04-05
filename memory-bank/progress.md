@@ -90,6 +90,14 @@
    - Explore Model Quantization (FP16/INT8)
    - Further minor detection optimization (Low priority)
 
+8. **YOLO-based Alternative Implementation** 🟡
+   - Created `scripts/MAIN_YOLO.py` with the same pipeline structure
+   - Implemented detection using YOLOv8/YOLO11 models
+   - Integrated ByteTrack for tracking
+   - Implemented pose estimation using YOLOv8/YOLO11-pose models
+   - Performance significantly slower than RTMDet/RTMPose (~1.9 FPS vs. ~26 FPS)
+   - Encountered GPU compatibility issues with RTX 5070 (CUDA capability sm_120)
+
 ### 🔜 Future Work: Action Recognition
 
 1. **Temporal Analysis**
