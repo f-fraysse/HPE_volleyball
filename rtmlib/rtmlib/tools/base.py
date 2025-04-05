@@ -112,31 +112,41 @@ class BaseTool(metaclass=ABCMeta):
         """       
         
         # Timing for input preparation
-        prep_start = time.time()  
+        prep_start = time.time()
 
-        img = img.transpose(2, 0, 1)
-        img = np.ascontiguousarray(img, dtype=np.float32)
-        input = img[None, :, :, :]
-        # input preparation time
+        # Handle both single image (HWC) and batch (NCHW) inputs
+        if img.ndim == 3: # Single image HWC
+            img = img.transpose(2, 0, 1) # HWC to CHW
+            img = np.ascontiguousarray(img, dtype=np.float32)
+            input_tensor = img[None, :, :, :] # Add batch dimension -> NCHW
+        elif img.ndim == 4: # Batch NCHW (already transposed in RTMPose)
+            input_tensor = np.ascontiguousarray(img, dtype=np.float32) # Ensure contiguous
+        else:
+            raise ValueError(f"Unsupported input dimension: {img.ndim}. Expected 3 (HWC) or 4 (NCHW).")
+
+        # input preparation time (excluding potential transpose in RTMPose)
         prep_time = (time.time() - prep_start) * 1000
-        
+
         # Timing for actual model execution
         model_start = time.time()
         
         # run model
         if self.backend == 'opencv':
+            # Note: OpenCV DNN might not handle batches easily this way.
+            # This backend path might need further adjustments if used with batching.
             outNames = self.session.getUnconnectedOutLayersNames()
-            self.session.setInput(input)
+            self.session.setInput(input_tensor)
             outputs = self.session.forward(outNames)
         elif self.backend == 'onnxruntime':
-            sess_input = {self.session.get_inputs()[0].name: input}
+            sess_input = {self.session.get_inputs()[0].name: input_tensor}
             sess_output = []
             for out in self.session.get_outputs():
                 sess_output.append(out.name)
 
             outputs = self.session.run(sess_output, sess_input)
         elif self.backend == 'openvino':
-            results = self.compiled_model(input)
+            # Note: OpenVINO input handling might also need adjustment for batches.
+            results = self.compiled_model(input_tensor)
             output0 = results[self.output_layer0]
             output1 = results[self.output_layer1]
             outputs = [output0, output1]

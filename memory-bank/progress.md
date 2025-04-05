@@ -13,7 +13,7 @@
    - RTMDet model successfully detects players in frames
    - Medium-sized model (RTMDet-m) provides good accuracy
    - Detection works reliably even with partial occlusions
-   - Current performance: ~40-110ms per frame
+   - **Current performance: ~19ms per frame** (Post-normalization optimization). Detection runs every frame.
 
 3. **Player Tracking**
    - ByteTrack algorithm successfully maintains player IDs
@@ -25,7 +25,7 @@
    - RTMPose model successfully estimates player poses
    - Medium-sized model (RTMPose-m) provides good accuracy
    - Correctly identifies keypoints for volleyball-specific poses
-   - Current performance: ~40-75ms per frame
+   - **Current performance: ~11ms per frame** (Post-batching optimization)
 
 5. **Output Generation**
    - Visual output with overlaid bounding boxes, IDs, and pose skeletons
@@ -59,26 +59,30 @@
    - Added CSV logging of all timing data
    - Added summary statistics output
 
-2. **RTMlib Integration** ✅
-   - Switched from using RTMlib as an installed package to a local editable copy
-   - Modified RTMlib to include detailed timing measurements
-   - Included the modified RTMlib in the project repository
-   - Updated installation instructions in README.md
+2. **RTMlib Integration & Modification** ✅
+   - Switched from using RTMlib as an installed package to a local editable copy.
+   - Modified RTMlib to include detailed timing measurements.
+   - Included the modified RTMlib in the project repository.
+   - Updated installation instructions in README.md.
+   - Modified `RTMPose` and `BaseTool` for batch pose estimation.
 
-3. **ONNX Runtime Optimization**
-   - Investigate and resolve warnings about CPU operations
-   - Experiment with graph optimization settings
-   - Configure execution providers appropriately
+3. **Preprocessing Optimization** ✅
+   - Optimized normalization using OpenCV functions in both `RTMDet` and `RTMPose`.
+   - Reduced preprocessing time significantly.
 
-4. **Preprocessing/Postprocessing Optimization**
-   - Identify and optimize inefficient operations based on profiling results
-   - Minimize unnecessary data conversions
-   - Optimize memory usage and transfers
+4. **Batch Pose Estimation** ✅
+   - Implemented batch processing in `RTMPose`.
+   - Reduced pose estimation time from ~20ms to ~11ms per frame.
 
-5. **Implementation of Optimization Strategies**
-   - Run detection less frequently (every N frames)
-   - Batch pose estimation inputs
-   - Explore model quantization (FP16)
+5. **Detection Frequency Reduction Experiment** 🟡 (Reverted)
+   - Explored running detection every N frames.
+   - Encountered tracking accuracy issues (flickering, lost tracks).
+   - Reverted `scripts/MAIN.py` to run detection every frame for robustness.
+
+6. **Implementation of Further Optimization Strategies** 🔄
+   - Explore GPU accelerated capture/preprocessing - **Next Priority**
+   - Explore Model Quantization (FP16/INT8)
+   - Further minor detection optimization (Low priority)
 
 ### 🔜 Future Work: Action Recognition
 
@@ -125,77 +129,54 @@
 - ✅ Visual output generation
 - ✅ HDF5 data storage
 
+### 🟢 Working Features
+
+- ✅ Video frame extraction
+- ✅ Player detection with RTMDet (every frame)
+- ✅ Player tracking with ByteTrack
+- ✅ Pose estimation with RTMPose (batch processing)
+- ✅ Visual output generation
+- ✅ HDF5 data storage
+- ✅ Performance profiling (Ongoing)
+
 ### 🟡 In Progress
 
-- ✅ Performance profiling
-- ✅ Analyzing profiling results
-- ✅ Identifying optimization opportunities
-- ✅ Implementing ONNX Runtime optimizations
-- 🔄 Evaluating alternative optimization strategies
+- 🔄 Analyzing profiling results (Ongoing)
+- 🔄 Exploring further optimization strategies (GPU Preprocessing, Quantization)
 
 ### 🔴 Known Issues
 
-1. **Performance Bottlenecks**
-   - Overall processing speed (~5.4 FPS) is too slow for real-time analysis
-   - Detection and pose estimation stages are the main bottlenecks
-   - Similar performance across different GPU hardware suggests potential CPU bottleneck or memory transfer issues
+1. **Detection Bottleneck**
+   - Detection stage (~19ms) is now the primary bottleneck limiting FPS.
 
 2. **ONNX Runtime Warnings**
-   - Warnings about operations being assigned to CPU instead of GPU
-   - Potential impact on performance due to CPU-GPU transfers
-
-3. **RTMlib Modification** ✅
-   - Addressed by using a local editable copy of RTMlib
-   - Modifications for bbox scores and profiling are now part of the project repository
-   - No longer dependent on manual modifications to installed packages
+   - Warnings about operations potentially being assigned to CPU persist. Impact unclear.
 
 ## Performance Metrics
 
-| Metric | Current Value | Target Value | Status |
-|--------|---------------|--------------|--------|
-| Detection Time | 31-47 ms | <20 ms | 🔴 Needs Improvement |
-| Tracking Time | ~1 ms | ~1 ms | 🟢 Optimal |
-| Pose Time | 31-47 ms (all bboxes) | <20 ms | 🔴 Needs Improvement |
-| Total FPS | ~5.4 | >15-20 | 🔴 Needs Improvement |
-| GPU Memory | Not measured | <8GB | 🟡 To Be Assessed |
-| CPU Usage | Not measured | <50% | 🟡 To Be Assessed |
+| Metric          | Avg Time (ms) | Target (ms) | Status                 | Notes                                      |
+|-----------------|---------------|-------------|------------------------|--------------------------------------------|
+| Detection Time  | ~19           | < 8         | Needs Improvement      | Post-normalization optimization          |
+| Tracking Time   | ~1            | < 1         | 🟢 Optimal             | ByteTrack                                  |
+| Pose Time       | ~11           | < 7         | Needs Improvement      | Batch processing implemented             |
+| **Total FPS**   | **~26**       | **50 (20ms)** | **Needs Improvement**  | Baseline after batch pose estimation     |
+| GPU Memory      | Not measured  | <8GB        | 🟡 To Be Assessed       |                                            |
+| CPU Usage       | Not measured  | <50%        | 🟡 To Be Assessed       |                                            |
+
 
 ## Next Milestone
 
-**Evaluate Alternative Optimization Strategies**
+**Explore Further Optimization Strategies (GPU Preprocessing / Quantization)**
 
-We have implemented and tested several optimization approaches with limited success:
+**Previous Milestone:** Revert Detection Frequency Reduction ✅
+- Restored `scripts/MAIN.py` to run detection every frame.
+- Updated Memory Bank documentation.
 
-1. **ONNX Runtime Optimization Results** ✅:
-   - Implemented enhanced session options with maximum graph optimization
-   - Configured CUDA provider options for better performance
-   - Results showed minimal performance impact:
-     * Some improvements in minimum times but similar average performance
-     * Higher variability in performance with occasional spikes
-     * ONNX Runtime warning about Memcpy nodes persisted, indicating CPU-GPU transfers
-
-2. **Buffer Preallocation Results** ✅:
-   - Implemented buffer preallocation in preprocessing steps
-   - Modified RTMPose to use preallocated buffers for input images
-   - Results showed minimal performance improvement
-   - Potential introduction of bugs in the detection pipeline
-
-3. **Memory Transfer Optimization Results** ✅:
-   - Corrected model input size parameters
-   - Ensured proper memory layout for tensor operations
-   - Results showed no significant performance improvements
-   - Memory transfer bottlenecks appear to be inherent to the ONNX Runtime implementation
-
-4. **Key Insights from Optimization Attempts**:
-   - Low-level optimizations (memory management, ONNX configuration) provided minimal benefits
-   - The bottlenecks may be more fundamental to the model architecture and ONNX Runtime
-   - More substantial changes to the pipeline architecture may be needed
-
-**Current Task**: Evaluate and implement more substantial optimization strategies
+**Current Task**: Investigate alternative optimization methods like GPU-accelerated preprocessing or model quantization to reach the 50 FPS target.
 
 **Target Completion**: TBD
 
-**Success Criteria**: 
-- Identification of a more effective optimization approach
-- Measurable improvement in overall processing speed
-- More consistent performance with lower variability
+**Success Criteria**:
+- Identify viable alternative optimization techniques.
+- Implement and evaluate the most promising technique(s).
+- Achieve further progress towards the 50 FPS target.

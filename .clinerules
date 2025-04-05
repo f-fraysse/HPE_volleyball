@@ -34,6 +34,7 @@ This file captures important patterns, preferences, and project intelligence for
      4. Estimate poses
      5. Save/display results
    - This pattern should be maintained in optimizations
+   - **Batch Pose Estimation**: RTMPose processes bounding boxes in batches for improved GPU utilization.
 
 3. **HDF5 Data Structure**
    - Each frame gets its own group: `frame_group = h5file.create_group(f"frame_{frame_id:05d}")`
@@ -42,10 +43,11 @@ This file captures important patterns, preferences, and project intelligence for
 
 ## Performance Patterns
 
-1. **Bottleneck Identification**
-   - Detection (~40-110ms) and pose estimation (~40-75ms) are the main bottlenecks
-   - Tracking is very efficient (~1ms) and not a bottleneck
-   - Similar performance across different GPU hardware suggests potential CPU bottleneck or memory transfer issues
+1. **Bottleneck Identification (Post-Batching)**
+   - **Detection (~19ms)** is now the primary bottleneck.
+   - **Pose Estimation (~11ms)** significantly improved via batching.
+   - Tracking remains efficient (~1ms).
+   - Further optimization focus should be on detection (e.g., frequency reduction) or model-level changes (quantization).
 
 2. **ONNX Runtime Patterns**
    - ONNX Runtime warnings indicate some operations are assigned to CPU instead of GPU
@@ -77,9 +79,8 @@ This file captures important patterns, preferences, and project intelligence for
 ## Critical Implementation Notes
 
 1. **RTMlib Modification**
-   - RTMlib's rtmdet.py requires modification to output bbox scores
-   - Line 141 must be changed from `return final_boxes` to `return final_boxes, final_scores`
-   - This modification is required for the tracking to work properly
+   - RTMlib's `rtmdet.py` requires modification to output bbox scores (Line 141: `return final_boxes, final_scores`).
+   - RTMlib's `rtmpose.py` and `base.py` were modified to implement **batch processing** for pose estimation.
 
 2. **ByteTrack Input Format**
    - ByteTrack expects detections in format: `[x1, y1, x2, y2, score, class_id]`

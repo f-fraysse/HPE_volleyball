@@ -52,13 +52,13 @@ flowchart TD
 
 - **Model**: RTMPose (from OpenMMLab)
 - **Format**: ONNX model running on ONNX Runtime with CUDA backend
-- **Input**: Cropped images from tracked bounding boxes
+- **Input**: **Batch** of cropped images from tracked bounding boxes
 - **Output**: Keypoint coordinates and confidence scores
-- **Implementation**: Uses RTMlib's RTMPose wrapper
+- **Implementation**: Uses RTMlib's RTMPose wrapper (**modified for batch processing**)
 - **Process Flow**:
-  - Preprocessing (crop, resize, normalize)
-  - ONNX inference session
-  - Postprocessing (decode keypoints)
+  - **Batch** Preprocessing (crop, resize, normalize for all boxes)
+  - **Single** ONNX inference session for the batch
+  - **Batch** Postprocessing (decode keypoints for all boxes)
 
 ### 5. Output Generation
 
@@ -112,10 +112,15 @@ flowchart LR
 
 ## Performance Considerations
 
-Current performance bottlenecks:
+**Baseline Performance (Post-Normalization Optimizations, Pre-Batching):**
+*   Detection Stage: ~17 ms/frame
+*   Pose Estimation Stage: ~20 ms/frame (sequential processing)
+*   Overall: ~22 FPS
 
-1. **Detection Stage**: ~40-110ms per frame
-2. **Pose Estimation Stage**: ~40-75ms per frame
+**Current Performance (Post-Batch Pose Estimation):**
+*   Detection Stage: ~19 ms/frame (stable)
+*   Pose Estimation Stage: **~11 ms/frame** (significant improvement due to batching)
+*   Overall: **~26 FPS**
 
 Current performance profiling focus:
 

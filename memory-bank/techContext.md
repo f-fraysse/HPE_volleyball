@@ -103,12 +103,13 @@ HPE_volleyball/
    - Modified to include detailed profiling capabilities
    - Modified to output bbox scores for tracking
    - Installed in development mode for easy modification
+   - Modified `RTMPose` and `BaseTool` for batch pose estimation
 
 ### Performance Constraints
 
-1. **Detection Time**: Currently ~40-110ms per frame
-2. **Pose Estimation Time**: Currently ~40-75ms per frame
-3. **Total Processing**: ~5.4 FPS (vs. 50 FPS video)
+1. **Detection Time**: ~19 ms/frame (Target: < 8ms for 50 FPS goal)
+2. **Pose Estimation Time**: ~11 ms/frame (Target: < 7ms for 50 FPS goal)
+3. **Total Processing**: ~26 FPS. Target is **50 FPS (20ms/frame)**. Initial 15-20 FPS target met.
 
 ## Dependencies and Installation
 

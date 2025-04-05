@@ -18,14 +18,15 @@ ensure_output_dirs()
 # Video Paths
 record_output = False
 IN_VIDEO_FILE = 'SAMPLE_17_01_2025_C2_S1.mp4'
-OUT_VIDEO_FILE = 'SAMPLE_det-M_pose-M_track-0508_Body26.mp4'
+# Reset output filename to avoid confusion with interval tests
+OUT_VIDEO_FILE = 'SAMPLE_det-M_pose-M_track-EveryFrame.mp4'
 resize_output = False
 resize_width = 960
 resize_height = 540
 
 # Data Paths
 record_results = False
-OUT_H5_FILE = "SAMPLE2_det-M_pose-M_track-0508.h5"
+OUT_H5_FILE = "SAMPLE2_det-M_pose-M_track-EveryFrame.h5"
 
 # Detection and tracking models
 RTMDET_MODEL = 'rtmdet-m-640.onnx'
@@ -40,7 +41,7 @@ backend = 'onnxruntime'
 log_dir = "profiling_logs"
 os.makedirs(log_dir, exist_ok=True)
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-log_file = os.path.join(log_dir, f"profiling_{timestamp}.csv")
+log_file = os.path.join(log_dir, f"profiling_{timestamp}_EveryFrame.csv") # Add suffix to log file
 
 # Initialize CSV log file with headers
 with open(log_file, 'w', newline='') as f:
@@ -103,18 +104,11 @@ detector = RTMDet(
     device=device
 )
 
-# detector = YOLOX(
-#     onnx_model=RTMDET_MODEL,
-#     model_input_size=(640, 640),
-#     backend=backend,
-#     device=device
-# )
-
 # Init ByteTrack tracker
 args = Namespace(
     track_thresh=0.5,
     match_thresh=0.8,
-    track_buffer=60,
+    track_buffer=60, # Keep original buffer setting
     frame_rate=fps,
     mot20=False,
     min_hits=3
@@ -124,13 +118,14 @@ tracker = BYTETracker(args)
 # init pose detector
 pose_estimator = RTMPose(
             onnx_model=RTMPOSE_MODEL,
-            model_input_size = (192, 256),        # 288, 384    
+            model_input_size = (192, 256),
             backend=backend,
             device=device)
 
 # ------------ START LOOP OVER FRAMES --------------
 frame_id = 0
 global_start = time.time()
+
 while cap.isOpened():
 
     start_time = time.perf_counter()
@@ -140,11 +135,11 @@ while cap.isOpened():
     frame_id += 1
     cap_time = time.perf_counter()
 
-    # Step 1: Detection with timing
+    # Step 1: Detection (runs every frame)
     det_bboxes_scores, det_timing = detector(frame)  # [x1, y1, x2, y2, conf]
     det_bboxes, det_scores = det_bboxes_scores
-    det_time = time.perf_counter() 
-    
+    det_time = time.perf_counter()
+
     # Update detection timing statistics
     for key in det_timing:
         if key in det_timing_stats:
@@ -152,80 +147,85 @@ while cap.isOpened():
 
     # Step 2: Format for ByteTrack
     if len(det_bboxes) > 0:
-        dets_for_tracker = np.array([[*box, score, 0] for box, score in zip(det_bboxes, det_scores)]) if len(det_bboxes) > 0 else np.empty((0, 6)) # append dummy class_id=0
+        dets_for_tracker = np.array([[*box, score, 0] for box, score in zip(det_bboxes, det_scores)])
     else:
         dets_for_tracker = np.empty((0, 6))
-    
+
     # Step 3: Tracking
     tracks = tracker.update(dets_for_tracker, [height, width], (height, width))
     track_time = time.perf_counter()
 
-    # Step 4: Pose estimation (keypoints)
-    img_show = frame.copy()    
+    # Step 4: Prepare data for Pose Estimation and Drawing (directly from tracker output)
+    img_show = frame.copy()
     track_ids = []
-    tracked_bboxes = []
-    bbox_scores = [] # keep bbox scores
-    bbox_rects = []  # (x1, y1, x2, y2) for drawing boxes and text    
+    tracked_bboxes = [] # BBoxes for pose estimator input
+    bbox_scores = []    # Scores corresponding to tracked_bboxes
+    bbox_rects = []     # Data for drawing boxes/labels
 
     for track in tracks:
+        # Only process tracks that are currently active/tracked
+        if not track.is_activated:
+             continue # Skip lost tracks for pose/drawing
+
         x1, y1, w, h = track.tlwh
         x2, y2 = x1 + w, y1 + h
         track_id = int(track.track_id)
+        score = track.score if hasattr(track, "score") else 0.0
 
         track_ids.append(track_id)
         tracked_bboxes.append([x1, y1, x2, y2])
-        bbox_scores.append(track.score if hasattr(track, "score") else 0.0)        
-        bbox_rects.append((x1, y1, x2, y2, track_id, track.score if hasattr(track, "score") else None))
+        bbox_scores.append(score)
+        bbox_rects.append((x1, y1, x2, y2, track_id, score))
 
-    # Initialize pose timing info with zeros in case there are no tracked bboxes
+    # Step 5: Pose estimation (keypoints)
+    # Initialize pose timing info
     pose_timing = {
-        'total': 0,
-        'preprocess': 0,
-        'prep': 0,
-        'model': 0,
-        'postprocess': 0,
-        'num_bboxes': 0
+        'total': 0, 'preprocess': 0, 'prep': 0, 'model': 0, 'postprocess': 0, 'num_bboxes': 0
     }
-    
+    keypoints_list = [] # Ensure these are initialized
+    scores_list = []
+
     if len(tracked_bboxes) > 0:
         keypoints_list, scores_list, pose_timing = pose_estimator(frame, tracked_bboxes)
-        
         # Update pose timing statistics
         for key in pose_timing:
             if key in pose_timing_stats and key != 'num_bboxes':
                 pose_timing_stats[key].append(pose_timing[key])
-    else:
-        keypoints_list, scores_list = [], []
-        
+    # else: keypoints_list, scores_list remain empty
+
     pose_time = time.perf_counter()
 
-    # Build the HDF5 file
+    # Step 6: Build the HDF5 file
     if record_results:
-        track_ids_array      = np.array(track_ids)
-        bboxes_array         = np.array(tracked_bboxes)
-        bbox_scores_array    = np.array(bbox_scores)
-        keypoints_array      = np.array(keypoints_list)      # shape (N, K, 2)
-        keypoint_scores_array = np.array(scores_list)        # shape (N, K)
+        # Ensure data corresponds to the tracks processed in this frame
+        track_ids_array = np.array(track_ids)
+        bboxes_array = np.array(tracked_bboxes) # Should be xyxy if needed, check format
+        # Convert tlwh from bbox_rects to xyxy if needed for HDF5 consistency
+        # bboxes_array = np.array([[r[0], r[1], r[2], r[3]] for r in bbox_rects]) # Example if xyxy needed
+        bbox_scores_array = np.array(bbox_scores)
+        keypoints_array = np.array(keypoints_list)      # shape (N, K, 2)
+        keypoint_scores_array = np.array(scores_list)   # shape (N, K)
 
-        frame_group = h5file.create_group(f"frame_{frame_id:05d}")
-        frame_group.create_dataset("track_ids", data=track_ids_array)
-        frame_group.create_dataset("bboxes", data=bboxes_array)
-        frame_group.create_dataset("bbox_scores", data=bbox_scores_array)
-        frame_group.create_dataset("keypoints", data=keypoints_array)
-        frame_group.create_dataset("keypoint_scores", data=keypoint_scores_array)
+        if track_ids_array.size > 0: # Only save if there's valid data
+            frame_group = h5file.create_group(f"frame_{frame_id:05d}")
+            frame_group.create_dataset("track_ids", data=track_ids_array)
+            frame_group.create_dataset("bboxes", data=bboxes_array) # Save the bboxes used for pose
+            frame_group.create_dataset("bbox_scores", data=bbox_scores_array)
+            frame_group.create_dataset("keypoints", data=keypoints_array)
+            frame_group.create_dataset("keypoint_scores", data=keypoint_scores_array)
 
-        # update trackID index
-        for tid in track_ids:
-            if tid not in track_id_index:
-                track_id_index[tid] = []
-            track_id_index[tid].append(frame_id)
-    
+            # update trackID index
+            for tid in track_ids: # Use track_ids from this frame
+                if tid not in track_id_index:
+                    track_id_index[tid] = []
+                track_id_index[tid].append(frame_id)
+
     hdf_time = time.perf_counter()
 
-    # ---DRAWING
-    # Draw skeletons
-    for keypoints, kpt_scores, track_id in zip(keypoints_list, scores_list, track_ids):
-        img_show = draw_skeleton(
+    # ---DRAWING---
+    # Draw skeletons (matched by order with track_ids)
+    for keypoints, kpt_scores in zip(keypoints_list, scores_list):
+         img_show = draw_skeleton(
             img_show,
             np.array([keypoints]),        # shape (1, K, 2)
             np.array([kpt_scores]),       # shape (1, K)
@@ -235,17 +235,17 @@ while cap.isOpened():
             line_width=2
         )
 
-    # Draw bboxes and ID labels
+    # Draw bboxes and ID labels (using bbox_rects from Step 4)
     for (x1, y1, x2, y2, track_id, score) in bbox_rects:
-        img_show = cv2.rectangle(img_show, (int(x1), int(y1)), (int(x2), int(y2)), (255, 0, 0), 2)
-        
+        img_show = cv2.rectangle(img_show, (int(x1), int(y1)), (int(x2), int(y2)), (255, 0, 0), 2) # Blue boxes
+
         label = f"ID: {track_id}"
         if score is not None:
             label += f" | {score:.2f}"
 
         img_show = cv2.putText(img_show, label, (int(x1), int(y1) - 5),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
-        
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2) # Blue text
+
     # Timing info
     disp_time = time.perf_counter()
     cap_duration = (cap_time - start_time) * 1000
@@ -255,7 +255,7 @@ while cap.isOpened():
     hdf5_duration = (hdf_time - pose_time) * 1000
     disp_duration = (disp_time - hdf_time) * 1000
     total_frame_time = (disp_time - start_time) * 1000
-    
+
     # Write to CSV log
     with open(log_file, 'a', newline='') as f:
         writer = csv.writer(f)
@@ -266,7 +266,7 @@ while cap.isOpened():
             pose_timing['num_bboxes'],
             cap_duration, track_duration, hdf5_duration, disp_duration, total_frame_time
         ])
-    
+
 
     img_show = cv2.putText(img_show, f'Volleyball Action Detection - FRANCOIS FRAYSSE @ UNISA', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 127, 0), 2)
     img_show = cv2.putText(img_show, f'cap: {cap_duration: .1f} ms', (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
@@ -304,16 +304,16 @@ if record_results:
 finish_time = time.time()
 print(f"total time: {(finish_time - global_start):.1f} seconds")
 
-# Print summary statistics
+# Print summary statistics (Reverted to original format)
 print("\n===== DETECTION TIMING STATISTICS =====")
 for key in det_timing_stats:
-    times = det_timing_stats[key][1:]
+    times = det_timing_stats[key][1:] # Skip first frame if needed for stable stats
     if times:
         print(f"{key}: min={min(times):.2f}ms, max={max(times):.2f}ms, avg={sum(times)/len(times):.2f}ms, median={sorted(times)[len(times)//2]:.2f}ms")
 
 print("\n===== POSE ESTIMATION TIMING STATISTICS =====")
 for key in pose_timing_stats:
-    times = pose_timing_stats[key][1:]
+    times = pose_timing_stats[key][1:] # Skip first frame if needed
     if times:
         print(f"{key}: min={min(times):.2f}ms, max={max(times):.2f}ms, avg={sum(times)/len(times):.2f}ms, median={sorted(times)[len(times)//2]:.2f}ms")
 

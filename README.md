@@ -19,6 +19,14 @@ https://github.com/user-attachments/assets/ff8d3e84-efd6-40c7-bcdf-7e803216a152
 
 ## 📁 updates
 
+### 2025/04/05: Batch Pose Estimation<br>
+Implemented batch processing for RTMPose estimation.<br>
+Previously, each detected bounding box was processed sequentially (preprocess, inference, postprocess).<br>
+Now, all bounding boxes in a frame are preprocessed together, inferred in a single batch call to ONNX Runtime, and postprocessed together.<br>
+This significantly reduced the pose estimation time from ~20ms to ~11ms per frame.<br>
+Overall pipeline speed increased from ~22 FPS to ~26 FPS, meeting the initial 15-20 FPS target.<br>
+Detection (~19ms) is now the primary bottleneck.<br>
+
 ### 2025/04/04: optimisations<br>
 Running ONNXruntime backend - CUDA Execution Provider, on GTX 1070Ti<br>
 RTMDet-m and RTMPose-m<br>

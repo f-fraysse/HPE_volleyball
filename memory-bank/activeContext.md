@@ -6,51 +6,49 @@ The current focus of the HPE_volleyball project is **performance optimization** 
 
 ### Primary Optimization Goal
 
-Increase the processing speed from the current ~5.4 FPS to a target of at least 15-20 FPS on the lab PC (RTX 4060), with an ideal goal of matching or exceeding the video recording rate (50 FPS).
+Increase the processing speed to **50 FPS (20ms total time per frame)** on the lab PC (RTX 4060) for potential real-time applications.
+**Status: Initial 15-20 FPS target met (~26 FPS). New 50 FPS target requires further optimization.**
 
-### Current Performance Metrics
+### Current Performance Metrics (Post-Optimizations)
 
-| Component | Current Time | Target Time |
-|-----------|--------------|------------|
-| Frame Capture | ~5-6 ms | (Already efficient) |
-| Detection | ~31-47 ms | <20 ms |
-| Tracking | ~1 ms | (Already efficient) |
-| Pose Estimation | ~31-47 ms (for all bboxes) | <20 ms |
-| Display/Storage | ~1-5 ms | (Already efficient) |
-| **Total** | ~90-190 ms/frame | <50 ms/frame |
+| Component       | Avg Time (ms) | Target Time (ms) | Status                 | Notes                                      |
+|-----------------|---------------|------------------|------------------------|--------------------------------------------|
+| Frame Capture   | ~5            | < 2              | Needs Improvement (Low Priority) | Default OpenCV backend                   |
+| Detection       | ~19           | < 8              | Needs Improvement      | Post-normalization optimization          |
+| Tracking        | ~1            | < 1              | Optimal                | ByteTrack                                  |
+| Pose Estimation | **~11**       | < 7              | Needs Improvement      | **Batch processing implemented**           |
+| Display/Storage | ~2            | < 2              | Acceptable             | HDF5 write + OpenCV display              |
+| **Total**       | **~38**       | **< 20**         | **Needs Improvement (Target: 50 FPS)** | Current ~26 FPS                          |
 
 ## Current Investigation
 
-We have completed detailed profiling of the inference pipeline and identified specific bottlenecks within the detection and pose estimation stages:
+Focus remains on performance, but the primary bottleneck has shifted slightly.
 
-### Detection Stage (RTMDet) Findings
-- **Total time**: ~31-47ms per frame
-- **Preprocessing**: ~15-16ms (significant portion of detection time)
-- **Inference**: ~15-31ms (varies significantly)
-- **Postprocessing**: Minimal in most frames
+### Detection Stage (RTMDet) Findings (Post-Normalization Opt.)
+- **Total time**: ~17-19ms per frame
+- **Preprocessing**: ~4.5ms (Optimized using OpenCV functions)
+- **Inference**: ~12.5ms
+- **Postprocessing**: Minimal
 
-### Pose Estimation Stage (RTMPose) Findings
-- **Total time**: ~31-47ms per frame (for all bounding boxes)
-- **Preprocessing**: ~0-3ms per bounding box (average)
-- **Inference**: ~6-9ms per bounding box (average)
-- **Postprocessing**: Minimal per bounding box
-- **Important insight**: The reported preprocessing, inference, and postprocessing times are averages per bounding box, while the total time is for all bounding boxes (typically 5)
+### Pose Estimation Stage (RTMPose) Findings (Post-Batching Opt.)
+- **Total time**: **~11ms per frame (for the entire batch)**
+- **Preprocessing**: ~4ms (Batch preprocessing time)
+- **Inference**: ~6ms (Single inference call for the batch)
+- **Postprocessing**: ~0.4ms (Batch postprocessing time)
+- **Key Change**: Inference is now called only *once* per frame for all detected boxes.
 
-### Key Bottlenecks Identified
-1. **Sequential processing of bounding boxes** in pose estimation - each bounding box is processed one at a time
-2. **Detection preprocessing overhead** - takes ~15-16ms, a significant portion of detection time
-3. **ONNX Runtime operations** potentially being assigned to CPU instead of GPU:
-   ```
-   [W:onnxruntime:, session_state.cc:1168 onnxruntime::VerifyEachNodeIsAssignedToAnEp] Some nodes were not assigned to the preferred execution providers which may or may not have an negative impact on performance. e.g. ORT explicitly assigns shape related ops to CPU to improve perf.
-   ```
-4. **Possible memory transfer inefficiencies** between CPU and GPU
+### Key Bottlenecks Identified (Current)
+1.  **Detection Stage**: Now the largest single component (~19ms).
+2.  **ONNX Runtime operations** potentially being assigned to CPU instead of GPU (Warning persists):
+    ```
+    [W:onnxruntime:, session_state.cc:1168 onnxruntime::VerifyEachNodeIsAssignedToAnEp] Some nodes were not assigned to the preferred execution providers which may or may not have an negative impact on performance. e.g. ORT explicitly assigns shape related ops to CPU to improve perf.
+    ```
+3.  **Possible memory transfer inefficiencies** between CPU and GPU (Implicit transfers still occur).
 
-### Optimization Priorities
-Based on our findings, we've identified the following optimization priorities:
-1. **ONNX Runtime Optimization** - Configure session options for better performance
-2. **Detection Frequency Reduction** - Run detection less frequently
-3. **Preprocessing Optimization** - Improve image preprocessing operations
-4. **Memory Transfer Optimization** - Minimize CPU-GPU transfers
+### Optimization Priorities (Revised)
+1.  **GPU Accelerated Capture/Preprocessing**: Explore options like PyNvVideoCodec for GPU decoding and/or rewriting preprocessing steps (resize, normalize, transpose) to run on the GPU (e.g., using PyTorch/CuPy) to minimize CPU bottlenecks and CPU<->GPU transfers. (High complexity, uncertain benefit unless preprocessing is also moved to GPU).
+2.  **Further Detection Optimization**: Explore if RTMDet preprocessing/postprocessing can be further optimized (Low priority).
+3.  **Model Quantization (FP16/INT8)**: Investigate potential performance gains and accuracy trade-offs of using lower-precision models.
 
 ## Recent Changes
 
@@ -58,155 +56,37 @@ Based on our findings, we've identified the following optimization priorities:
    - Video frame extraction
    - Player detection using RTMDet
    - Player tracking using ByteTrack
-   - Pose estimation using RTMPose
+   - Pose estimation using RTMPose (**now with batch processing**)
    - Output generation (video overlay and HDF5 data)
 
-2. **Established baseline performance metrics** across different GPUs:
-   - RTX 5070 (home PC)
-   - RTX 4060 (lab PC)
-   - GTX 1070 Ti (previous testing)
+2. **Optimized Preprocessing**: Implemented OpenCV-based normalization in `RTMDet` and `RTMPose` preprocessing, significantly reducing preprocessing time. (~17ms det, ~20ms pose baseline achieved).
 
-3. **Identified performance bottlenecks**:
-   - Detection stage (~40-110 ms/frame)
-   - Pose estimation stage (~40-75 ms/frame)
+3. **Implemented Batch Pose Estimation**: Modified `RTMPose` and `BaseTool` to process all detected bounding boxes in a single batch, reducing pose estimation time to ~11ms.
 
-4. **Created optimization guide** outlining potential strategies for improving performance.
+4. **Achieved Initial Target FPS**: Overall pipeline speed increased from ~5.4 FPS initially, to ~22 FPS after preprocessing optimization, and then to **~26 FPS** after batch pose estimation, meeting the initial 15-20 FPS target. **New target is 50 FPS.**
 
-5. **Implemented detailed profiling**:
-   - Modified RTMlib to include detailed timing measurements
-   - Added timing for preprocessing, inference, and postprocessing in both detection and pose estimation
-   - Implemented CSV logging of all timing data
-   - Added summary statistics output
+5. **Established baseline performance metrics** across different GPUs (though specific timings in this doc might refer to 1070Ti tests).
 
-6. **Changed RTMlib handling**:
-   - Switched from using RTMlib as an installed package to a local editable copy
-   - Included the modified RTMlib in the project repository
-   - Updated installation instructions in README.md
+6. **Identified performance bottlenecks** (updated based on latest optimizations).
 
-## Recent Optimization Attempts
+7. **Created optimization guide** (may need updating).
 
-We have attempted several optimization strategies with limited success:
+8. **Implemented detailed profiling** (remains active).
 
-### 1. ONNX Runtime Optimization ✅
-
-We implemented enhanced session options for ONNX Runtime:
-
-```python
-import onnxruntime as ort
-
-# Create optimized session options
-options = ort.SessionOptions()
-options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
-options.enable_cpu_mem_arena = False  # Reduce memory usage
-options.enable_mem_pattern = False    # May help with GPU memory fragmentation
-options.intra_op_num_threads = 4      # Control CPU thread usage
-
-# Configure provider options for CUDA
-provider_options = {
-    'device_id': 0,
-    'arena_extend_strategy': 'kNextPowerOfTwo',
-    'gpu_mem_limit': 2 * 1024 * 1024 * 1024,  # 2GB
-    'cudnn_conv_algo_search': 'EXHAUSTIVE',
-    'do_copy_in_default_stream': True,
-}
-
-session = ort.InferenceSession(
-    path_or_bytes=onnx_model,
-    sess_options=options,
-    providers=[('CUDAExecutionProvider', provider_options), 'CPUExecutionProvider']
-)
-```
-
-**Results:**
-- Very little impact on overall performance
-- Some improvements in minimum times but similar average performance
-- Higher variability in performance with occasional spikes
-- ONNX Runtime warning about Memcpy nodes persisted:
-  ```
-  [W:onnxruntime: transformer_memcpy.cc:74 onnxruntime::MemcpyTransformer::ApplyImpl] 2 Memcpy nodes are added to the graph torch-jit-export for CUDAExecutionProvider.
-  ```
-- This indicates some operations are still being executed on CPU rather than GPU
-
-### 2. Buffer Preallocation ✅
-
-We implemented buffer preallocation in preprocessing steps to reduce memory allocations:
-
-- Preallocated buffers for image resizing and preprocessing
-- Modified RTMPose to use preallocated buffers for input images
-- Attempted to minimize memory allocations during inference
-
-**Results:**
-- Minimal performance improvement
-- Potential introduction of bugs in the detection pipeline
-- No significant reduction in processing time
-
-### 3. Memory Transfer Optimization ✅
-
-We attempted to optimize memory transfers between CPU and GPU:
-
-- Corrected model input size parameters
-- Ensured proper memory layout for tensor operations
-- Minimized unnecessary data conversions
-
-**Results:**
-- No significant performance improvements
-- Potential issues with the detection pipeline
-- Memory transfer bottlenecks appear to be inherent to the ONNX Runtime implementation
+9. **Changed RTMlib handling** (remains active).
+10. **Reverted Detection Frequency Reduction**: Restored `scripts/MAIN.py` to run detection every frame due to tracking accuracy issues observed with infrequent detection.
 
 ## Next Steps
 
-Based on our findings from these optimization attempts, we need to explore more substantial changes:
+With the detection frequency experiment reverted, the next logical steps focus on other optimization avenues to achieve the **50 FPS target**:
 
-### Short-term Optimization Strategies
-
-Once profiling is complete, implement the most promising optimization strategies:
-
-1. **Preprocessing optimizations**:
-   - Optimize image resizing operations
-   - Minimize data format conversions
-   - Ensure efficient memory layout
-
-2. **ONNX Runtime optimizations**:
-   - Configure execution providers appropriately
-   - Enable graph optimizations
-   - Investigate operation placement
-
-3. **Postprocessing optimizations**:
-   - Optimize non-maximum suppression
-   - Streamline coordinate transformations
-   - Minimize unnecessary computations
-
-### Medium-term Optimization Strategies
-
-After implementing and evaluating the immediate optimizations:
-
-1. **Run detection less frequently** (every N frames):
-   - Implement frame skipping for detection
-   - Rely on tracking for intermediate frames
-   - Evaluate accuracy vs. performance tradeoff
-
-2. **Batch pose estimation inputs**:
-   - Modify pose estimation to process all crops in a single batch
-   - Evaluate performance improvement
-
-3. **Explore model quantization**:
-   - Convert models to FP16 precision
-   - Evaluate accuracy impact
-   - Measure performance improvement
+1.  **Explore GPU Accelerated Capture/Preprocessing**: Investigate feasibility and potential benefits of using libraries like `PyNvVideoCodec` for decoding and potentially rewriting preprocessing steps to run entirely on the GPU.
+2.  **Further Detection Optimization**: Re-examine RTMDet preprocessing/postprocessing for any remaining minor optimization opportunities (Low priority).
+3.  **Model Quantization**: Explore using FP16 or INT8 versions of the RTMDet/RTMPose models if available, assessing performance vs. accuracy.
 
 ## Current Questions and Considerations
 
-1. **Is the bottleneck in the models themselves or in the pre/post-processing?**
-   - Need to determine if the actual ONNX inference is the bottleneck or if it's the surrounding operations
-
-2. **Why is performance similar across different GPU hardware?**
-   - Investigate if there's a common bottleneck (e.g., CPU operations, memory transfers)
-
-3. **How much can we optimize without sacrificing accuracy?**
-   - Need to establish acceptable accuracy thresholds for any optimization
-
-4. **Are there specific ONNX Runtime configurations that could improve performance?**
-   - Explore execution provider options and graph optimizations
-
-5. **Could we benefit from custom CUDA kernels for specific operations?**
-   - Evaluate if any operations would benefit from custom implementation
+1.  **GPU Preprocessing Benefit**: How much performance gain can be realistically achieved by moving video decoding and/or preprocessing to the GPU?
+2.  **FP16/INT8 Accuracy Impact**: How much does lower-precision quantization affect the accuracy of RTMDet and RTMPose for this specific volleyball task? Are pre-quantized models available?
+3.  **ONNX CPU Ops Impact**: Are the operations running on the CPU (as indicated by warnings) actually impacting performance significantly, or are they minor shape/metadata operations as ONNX Runtime suggests? Can they be forced to GPU?
+4.  **Hardware Bottlenecks**: With the current ~26 FPS (running detection every frame), how much further can we push performance on the RTX 4060 towards the 50 FPS goal using other techniques?

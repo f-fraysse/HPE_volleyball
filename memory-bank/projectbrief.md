@@ -38,6 +38,6 @@ The immediate focus is on optimizing the performance of the detection-tracking-p
 
 1. Reliable player detection and tracking throughout training sessions
 2. Accurate pose estimation for tracked players
-3. Inference speed of at least 15-20 FPS on target hardware
+3. Inference speed of at least **50 FPS (20ms per frame)** on target hardware for potential real-time applications (Initial target of 15-20 FPS met).
 4. Structured data output suitable for further analysis
 5. Eventually: Accurate recognition of volleyball-specific actions
