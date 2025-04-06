@@ -115,7 +115,7 @@ class RTMPose(BaseTool):
 
             # do affine transformation
             # top_down_affine returns the transformed image crop
-            resized_img, _ = top_down_affine(self.model_input_size, scale, center, img)
+            resized_img, updated_scale = top_down_affine(self.model_input_size, scale, center, img)
 
             # normalize image
             if self.mean is not None:
@@ -128,7 +128,7 @@ class RTMPose(BaseTool):
                  batch_img.append(resized_img) # Append original uint8 if no normalization
 
             centers.append(center)
-            scales.append(scale) # Store the scale used for the transformation
+            scales.append(updated_scale) # Store the scale used for the transformation
 
         # Stack the processed images into a batch
         if batch_img:
