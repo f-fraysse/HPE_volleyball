@@ -17,70 +17,74 @@ ensure_output_dirs()
 #---------- CONFIGURATION ------------------
 # Video Paths
 record_output = False
-IN_VIDEO_FILE = 'SAMPLE_17_01_2025_C2_S1.mp4'
+IN_VIDEO_FILE = 'SAMPLE_LONG.mp4'
 # Reset output filename to avoid confusion with interval tests
-OUT_VIDEO_FILE = 'SAMPLE_det-M_pose-M_0508.mp4'
+OUT_VIDEO_FILE = 'SAMPLE_LONG_det-M_pose-M_0508.mp4'
 resize_output = False
 resize_width = 960
 resize_height = 540
 
 # Data Paths
 record_results = False
-OUT_H5_FILE = "SAMPLE2_det-M_pose-M_track-EveryFrame.h5"
+OUT_H5_FILE = "SAMPLE_LONG_det-M_pose-M_track-EveryFrame.h5"
+
+# Profiling
+record_profiling = False
 
 # Detection and tracking models
 RTMDET_MODEL = 'rtmdet-m-640.onnx'
-RTMPOSE_MODEL = 'rtmpose-m-256-192_26k.onnx'
+RTMPOSE_MODEL = 'rtmpose-m-256-192.onnx'
 
 # RTMPose engine
 device = 'cuda'
 backend = 'onnxruntime'
 #---------- CONFIGURATION ------------------
 
-# Create profiling logs directory
-log_dir = "profiling_logs"
-os.makedirs(log_dir, exist_ok=True)
-timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-log_file = os.path.join(log_dir, f"profiling_{timestamp}_EveryFrame.csv") # Add suffix to log file
+# Create profiling logs directory and initialize profiling variables
+if record_profiling:
+    log_dir = "profiling_logs"
+    os.makedirs(log_dir, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_file = os.path.join(log_dir, f"profiling_{timestamp}_EveryFrame.csv") # Add suffix to log file
 
-# Initialize CSV log file with headers
-with open(log_file, 'w', newline='') as f:
-    writer = csv.writer(f)
-    writer.writerow([
-        'frame_id',
-        'det_total', 'det_preprocess', 'det_prep', 'det_model', 'det_postprocess', # Detailed detection
-        'pose_total', 'pose_preprocess', 'pose_prep', 'pose_model', 'pose_postprocess', 'pose_num_bboxes', # Detailed pose
-        'cap_time_ms', 'det_time_ms', 'track_time_ms', 'pose_time_ms', 'hdf5_time_ms', # Overall components
-        'disp_time_ms', 'csv_time_ms', 'draw_time_ms', 'total_frame_time_ms' # Overall components cont.
-    ])
+    # Initialize CSV log file with headers
+    with open(log_file, 'w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow([
+            'frame_id',
+            'det_total', 'det_preprocess', 'det_prep', 'det_model', 'det_postprocess', # Detailed detection
+            'pose_total', 'pose_preprocess', 'pose_prep', 'pose_model', 'pose_postprocess', 'pose_num_bboxes', # Detailed pose
+            'cap_time_ms', 'det_time_ms', 'track_time_ms', 'pose_time_ms', 'hdf5_time_ms', # Overall components
+            'disp_time_ms', 'csv_time_ms', 'draw_time_ms', 'total_frame_time_ms' # Overall components cont.
+        ])
 
-# Add these variables to track DETAILED timing statistics
-det_timing_stats = {
-    'total': [],
-    'preprocess': [],
-    'prep': [],
-    'model': [],
-    'postprocess': []
-}
+    # Add these variables to track DETAILED timing statistics
+    det_timing_stats = {
+        'total': [],
+        'preprocess': [],
+        'prep': [],
+        'model': [],
+        'postprocess': []
+    }
 
-pose_timing_stats = {
-    'total': [],
-    'preprocess': [],
-    'prep': [],
-    'model': [],
-    'postprocess': []
-}
+    pose_timing_stats = {
+        'total': [],
+        'preprocess': [],
+        'prep': [],
+        'model': [],
+        'postprocess': []
+    }
 
-# Add lists to store OVERALL timing durations for final stats
-cap_times_ms = []
-det_times_ms = []
-track_times_ms = []
-pose_times_ms = []
-hdf_times_ms = []
-disp_times_ms = []
-csv_times_ms = []
-draw_times_ms = []
-total_frame_times_ms = []
+    # Add lists to store OVERALL timing durations for final stats
+    cap_times_ms = []
+    det_times_ms = []
+    track_times_ms = []
+    pose_times_ms = []
+    hdf_times_ms = []
+    disp_times_ms = []
+    csv_times_ms = []
+    draw_times_ms = []
+    total_frame_times_ms = []
 
 
 # Make the full path + file names
@@ -142,6 +146,12 @@ global_start = time.time()
 csv_duration_ms = 0.0
 draw_duration_ms = 0.0
 
+# Create a named window with normal flags (needed for full screen toggle)
+cv2.namedWindow("FullScreen", cv2.WINDOW_NORMAL)
+
+# Set the window property to full screen
+cv2.setWindowProperty("FullScreen", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+
 while cap.isOpened():
 
     start_time = time.perf_counter()
@@ -157,9 +167,10 @@ while cap.isOpened():
     det_time = time.perf_counter()
 
     # Update detection timing statistics
-    for key in det_timing:
-        if key in det_timing_stats:
-            det_timing_stats[key].append(det_timing[key])
+    if record_profiling:
+        for key in det_timing:
+            if key in det_timing_stats:
+                det_timing_stats[key].append(det_timing[key])
 
     # Step 2: Format for ByteTrack
     if len(det_bboxes) > 0:
@@ -204,9 +215,10 @@ while cap.isOpened():
     if len(tracked_bboxes) > 0:
         keypoints_list, scores_list, pose_timing = pose_estimator(frame, tracked_bboxes)
         # Update pose timing statistics
-        for key in pose_timing:
-            if key in pose_timing_stats and key != 'num_bboxes':
-                pose_timing_stats[key].append(pose_timing[key])
+        if record_profiling:
+            for key in pose_timing:
+                if key in pose_timing_stats and key != 'num_bboxes':
+                    pose_timing_stats[key].append(pose_timing[key])
     # else: keypoints_list, scores_list remain empty
 
     pose_time = time.perf_counter()
@@ -277,18 +289,19 @@ while cap.isOpened():
     # Write to CSV log (using previous frame's csv/draw times for total calculation consistency)
     # Note: total_frame_time uses csv_duration_ms and draw_duration_ms from the *previous* frame
     total_frame_time = cap_duration + det_duration + track_duration + pose_duration + hdf5_duration + disp_duration + csv_duration_ms + draw_duration_ms
-    with open(log_file, 'a', newline='') as f:
-        writer = csv.writer(f)
-        writer.writerow([
-            frame_id,
-            # Detailed timings (from detector/pose estimator internal profiling)
-            det_timing.get('total', 0), det_timing.get('preprocess', 0), det_timing.get('prep', 0), det_timing.get('model', 0), det_timing.get('postprocess', 0),
-            pose_timing.get('total', 0), pose_timing.get('preprocess', 0), pose_timing.get('prep', 0), pose_timing.get('model', 0), pose_timing.get('postprocess', 0),
-            pose_timing.get('num_bboxes', 0),
-            # Overall component timings (calculated in this script)
-            cap_duration, det_duration, track_duration, pose_duration, hdf5_duration,
-            disp_duration, csv_duration_ms, draw_duration_ms, total_frame_time # Use previous frame's csv/draw
-        ])
+    if record_profiling:
+        with open(log_file, 'a', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                frame_id,
+                # Detailed timings (from detector/pose estimator internal profiling)
+                det_timing.get('total', 0), det_timing.get('preprocess', 0), det_timing.get('prep', 0), det_timing.get('model', 0), det_timing.get('postprocess', 0),
+                pose_timing.get('total', 0), pose_timing.get('preprocess', 0), pose_timing.get('prep', 0), pose_timing.get('model', 0), pose_timing.get('postprocess', 0),
+                pose_timing.get('num_bboxes', 0),
+                # Overall component timings (calculated in this script)
+                cap_duration, det_duration, track_duration, pose_duration, hdf5_duration,
+                disp_duration, csv_duration_ms, draw_duration_ms, total_frame_time # Use previous frame's csv/draw
+            ])
     csv_time = time.perf_counter() # End of CSV write
     current_csv_duration = (csv_time - csv_write_start_time) * 1000 # CSV write time for *this* frame
 
@@ -309,7 +322,7 @@ while cap.isOpened():
     # Resize & show
     if resize_output:
         img_show = cv2.resize(img_show, (resize_width, resize_height))
-    cv2.imshow('Tracking Output', img_show)
+    cv2.imshow('FullScreen', img_show)
 
     if record_output:
         out.write(img_show)
@@ -318,7 +331,7 @@ while cap.isOpened():
     current_draw_duration = (draw_time - csv_time) * 1000 # Draw time for *this* frame
 
     # Store overall timings for final stats
-    if frame_id > 1: # Optionally skip first frame for more stable stats
+    if record_profiling and frame_id > 1: # Optionally skip first frame for more stable stats
         cap_times_ms.append(cap_duration)
         det_times_ms.append(det_duration)
         track_times_ms.append(track_duration)
@@ -353,65 +366,66 @@ if record_results:
 finish_time = time.time()
 print(f"total time: {(finish_time - global_start):.1f} seconds")
 
-# Helper function to calculate statistics
-def calculate_stats(times_list):
-    if not times_list:
-        return {'min': 0, 'max': 0, 'avg': 0, 'median': 0}
-    return {
-        'min': min(times_list),
-        'max': max(times_list),
-        'avg': sum(times_list) / len(times_list),
-        'median': statistics.median(times_list)
+if record_profiling:
+    # Helper function to calculate statistics
+    def calculate_stats(times_list):
+        if not times_list:
+            return {'min': 0, 'max': 0, 'avg': 0, 'median': 0}
+        return {
+            'min': min(times_list),
+            'max': max(times_list),
+            'avg': sum(times_list) / len(times_list),
+            'median': statistics.median(times_list)
+        }
+
+    # Calculate overall statistics
+    overall_stats = {
+        "Total": calculate_stats(total_frame_times_ms),
+        "Capture": calculate_stats(cap_times_ms),
+        "Detection": calculate_stats(det_times_ms),
+        "Track": calculate_stats(track_times_ms),
+        "Pose": calculate_stats(pose_times_ms),
+        "Hdf": calculate_stats(hdf_times_ms),
+        "Disp": calculate_stats(disp_times_ms),
+        "Csv": calculate_stats(csv_times_ms),
+        "Draw": calculate_stats(draw_times_ms),
     }
 
-# Calculate overall statistics
-overall_stats = {
-    "Total": calculate_stats(total_frame_times_ms),
-    "Capture": calculate_stats(cap_times_ms),
-    "Detection": calculate_stats(det_times_ms),
-    "Track": calculate_stats(track_times_ms),
-    "Pose": calculate_stats(pose_times_ms),
-    "Hdf": calculate_stats(hdf_times_ms),
-    "Disp": calculate_stats(disp_times_ms),
-    "Csv": calculate_stats(csv_times_ms),
-    "Draw": calculate_stats(draw_times_ms),
-}
-
-# Print OVERALL summary statistics (Tab Aligned)
-print("\n===== OVERALL TIMING STATISTICS =====")
-# Print header
-print(f"{'Component':<10}\t{'Min (ms)':<10}\t{'Max (ms)':<10}\t{'Avg (ms)':<10}\t{'Median (ms)':<10}")
-print("-" * 60) # Separator line
-for name, stats in overall_stats.items():
-    print(f"{name:<10}\t{stats['min']:<10.1f}\t{stats['max']:<10.1f}\t{stats['avg']:<10.1f}\t{stats['median']:<10.1f}")
+    # Print OVERALL summary statistics (Tab Aligned)
+    print("\n===== OVERALL TIMING STATISTICS =====")
+    # Print header
+    print(f"{'Component':<10}\t{'Min (ms)':<10}\t{'Max (ms)':<10}\t{'Avg (ms)':<10}\t{'Median (ms)':<10}")
+    print("-" * 60) # Separator line
+    for name, stats in overall_stats.items():
+        print(f"{name:<10}\t{stats['min']:<10.1f}\t{stats['max']:<10.1f}\t{stats['avg']:<10.1f}\t{stats['median']:<10.1f}")
 
 
-# Print DETAILED summary statistics (Tab Aligned)
-print("\n===== DETECTION TIMING STATISTICS =====")
-print(f"{'Component':<12}\t{'Min (ms)':<10}\t{'Max (ms)':<10}\t{'Avg (ms)':<10}\t{'Median (ms)':<10}")
-print("-" * 65) # Separator line
-for key in det_timing_stats:
-    # Use times collected by RTMDet/RTMPose directly, skip first frame for stable stats
-    times = det_timing_stats[key][1:]
-    if times:
-        # Calculate median using statistics library for consistency
-        min_val = min(times)
-        max_val = max(times)
-        avg_val = sum(times)/len(times)
-        median_val = statistics.median(times) if len(times) > 0 else 0
-        print(f"{key:<12}\t{min_val:<10.1f}\t{max_val:<10.1f}\t{avg_val:<10.1f}\t{median_val:<10.1f}")
+    # Print DETAILED summary statistics (Tab Aligned)
+    print("\n===== DETECTION TIMING STATISTICS =====")
+    print(f"{'Component':<12}\t{'Min (ms)':<10}\t{'Max (ms)':<10}\t{'Avg (ms)':<10}\t{'Median (ms)':<10}")
+    print("-" * 65) # Separator line
+    for key in det_timing_stats:
+        # Use times collected by RTMDet/RTMPose directly, skip first frame for stable stats
+        times = det_timing_stats[key][1:]
+        if times:
+            # Calculate median using statistics library for consistency
+            min_val = min(times)
+            max_val = max(times)
+            avg_val = sum(times)/len(times)
+            median_val = statistics.median(times) if len(times) > 0 else 0
+            print(f"{key:<12}\t{min_val:<10.1f}\t{max_val:<10.1f}\t{avg_val:<10.1f}\t{median_val:<10.1f}")
 
-print("\n===== POSE ESTIMATION TIMING STATISTICS =====")
-print(f"{'Component':<12}\t{'Min (ms)':<10}\t{'Max (ms)':<10}\t{'Avg (ms)':<10}\t{'Median (ms)':<10}")
-print("-" * 65) # Separator line
-for key in pose_timing_stats:
-    # Use times collected by RTMDet/RTMPose directly, skip first frame for stable stats
-    times = pose_timing_stats[key][1:]
-    if times:
-        min_val = min(times)
-        max_val = max(times)
-        avg_val = sum(times)/len(times)
-        median_val = statistics.median(times) if len(times) > 0 else 0
-        print(f"{key:<12}\t{min_val:<10.1f}\t{max_val:<10.1f}\t{avg_val:<10.1f}\t{median_val:<10.1f}")
+    print("\n===== POSE ESTIMATION TIMING STATISTICS =====")
+    print(f"{'Component':<12}\t{'Min (ms)':<10}\t{'Max (ms)':<10}\t{'Avg (ms)':<10}\t{'Median (ms)':<10}")
+    print("-" * 65) # Separator line
+    for key in pose_timing_stats:
+        # Use times collected by RTMDet/RTMPose directly, skip first frame for stable stats
+        times = pose_timing_stats[key][1:]
+        if times:
+            min_val = min(times)
+            max_val = max(times)
+            avg_val = sum(times)/len(times)
+            median_val = statistics.median(times) if len(times) > 0 else 0
+            print(f"{key:<12}\t{min_val:<10.1f}\t{max_val:<10.1f}\t{avg_val:<10.1f}\t{median_val:<10.1f}")
 
-print(f"\nDetailed profiling data saved to: {log_file}")
+    print(f"\nDetailed profiling data saved to: {log_file}")
