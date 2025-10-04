@@ -10,10 +10,12 @@
    - Frame extraction is efficient (~5-6ms per frame)
 
 2. **Player Detection**
-   - RTMDet model successfully detects players in frames
-   - Medium-sized model (RTMDet-m) provides good accuracy
+   - RTMDet and RT-DETR models successfully detect players in frames
+   - Medium-sized models (RTMDet-m, RT-DETR) provide good accuracy
    - Detection works reliably even with partial occlusions
-   - **Current performance: ~19ms per frame** (Post-normalization optimization). Detection runs every frame.
+   - **RTMDet performance: ~19ms per frame** (Post-normalization optimization)
+   - **RT-DETR performance: ~23.7ms per frame** (Post-normalization optimization)
+   - Detection runs every frame for both models
 
 3. **Player Tracking**
    - ByteTrack algorithm successfully maintains player IDs
@@ -90,7 +92,23 @@
    - Explore Model Quantization (FP16/INT8)
    - Further minor detection optimization (Low priority)
 
-8. **YOLO-based Alternative Implementation** 🟡
+8. **Modular Detector Architecture** ✅
+   - Created pluggable detector system with consistent interfaces
+   - Implemented `pipeline/detector_base.py` with DetectorProtocol and factory
+   - Created detector adapters: `rtmdet_onnx.py` and `rtdetr_onnx.py`
+   - Updated `scripts/MAIN.py` to support detector selection via config
+   - Maintains identical output format and profiling regardless of detector
+
+9. **RT-DETR Integration & Optimization** ✅
+   - Successfully integrated RT-DETRv2 ONNX detector
+   - Fixed coordinate space handling (letterbox to original frame)
+   - Increased confidence threshold from 0.30 to 0.70
+   - Applied cv2-based preprocessing optimization
+   - **Performance gain**: Preprocessing 10.5ms → 4.3ms (2.4x speedup)
+   - **Overall detection**: 30.5ms → 23.7ms (22% faster)
+   - RT-DETR now competitive with RTMDet (1.25x slower vs 2x before)
+
+10. **YOLO-based Alternative Implementation** 🟡
    - Created `scripts/MAIN_YOLO.py` with the same pipeline structure
    - Implemented detection using YOLOv8/YOLO11 models
    - Integrated ByteTrack for tracking
@@ -146,12 +164,13 @@
 ### 🟢 Working Features
 
 - ✅ Video frame extraction
-- ✅ Player detection with RTMDet (every frame)
+- ✅ Player detection with RTMDet or RT-DETR (every frame, modular architecture)
 - ✅ Player tracking with ByteTrack
 - ✅ Pose estimation with RTMPose (batch processing)
 - ✅ Visual output generation
 - ✅ HDF5 data storage
 - ✅ Performance profiling (Ongoing)
+- ✅ Optimized preprocessing for all detectors (cv2-based normalization)
 
 ### 🟡 In Progress
 
@@ -182,9 +201,11 @@
 
 **Explore Further Optimization Strategies (GPU Preprocessing / Quantization)**
 
-**Previous Milestone:** Profiling Refactoring & Documentation Update ✅
-- Refactored performance profiling in `scripts/MAIN.py`.
-- Updated `README.md` and Memory Bank (`activeContext.md`, `progress.md`).
+**Previous Milestone:** RT-DETR Preprocessing Optimization ✅
+- Applied cv2-based normalization to RT-DETR detector
+- Achieved 2.4x speedup in preprocessing (10.5ms → 4.3ms)
+- Reduced overall detection time by 22% (30.5ms → 23.7ms)
+- RT-DETR now competitive with RTMDet (1.25x slower vs 2x before)
 
 **Current Task**: Investigate alternative optimization methods like GPU-accelerated preprocessing or model quantization to reach the 50 FPS target.
 

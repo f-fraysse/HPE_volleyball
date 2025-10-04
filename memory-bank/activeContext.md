@@ -26,13 +26,32 @@ Increase the processing speed to **50 FPS (20ms total time per frame)** on the l
 
 ## Current Investigation
 
-Focus remains on performance, but the primary bottleneck has shifted slightly.
+### RT-DETR Preprocessing Optimization (Latest Work)
 
-### Detection Stage (RTMDet) Findings (Post-Normalization Opt.)
-- **Total time**: ~17-19ms per frame
-- **Preprocessing**: ~4.5ms (Optimized using OpenCV functions)
-- **Inference**: ~12.5ms
-- **Postprocessing**: Minimal
+Successfully optimized RT-DETR preprocessing using the same cv2-based approach that worked for RTMDet:
+
+**Performance Improvements:**
+- RT-DETR preprocessing: **10.5ms → 4.3ms** (59% faster, 2.4x speedup)
+- RT-DETR total detection: **30.5ms → 23.7ms** (22% faster overall)
+- Overall pipeline: **~52-56ms per frame** (~18-19 FPS)
+
+**Key Changes:**
+1. Replaced NumPy normalization with cv2 in-place operations
+2. Eliminated BGR→RGB conversion (model accepts BGR input)
+3. Removed division by 255 (work in 0-255 range)
+4. Updated normalization constants to BGR 0-255 format
+5. Added `copy=False` flag to avoid memory allocation
+
+**RT-DETR vs RTMDet Comparison (Post-Optimization):**
+- **RT-DETR**: ~23.7ms detection (preprocessing: 4.3ms, inference: ~19ms)
+- **RTMDet**: ~19ms detection (preprocessing: 4.5ms, inference: ~12.5ms)
+- Gap reduced from 2x slower to only 1.25x slower
+
+### Detection Stage Findings (Current)
+- **RTMDet**: ~19ms total (preprocessing: 4.5ms, inference: ~12.5ms)
+- **RT-DETR**: ~23.7ms total (preprocessing: 4.3ms, inference: ~19ms)
+- Both now use optimized cv2-based preprocessing
+- RT-DETR's slower inference is inherent to model architecture
 
 ### Pose Estimation Stage (RTMPose) Findings (Post-Batching Opt.)
 - **Total time**: **~11ms per frame (for the entire batch)**
@@ -58,12 +77,12 @@ Focus remains on performance, but the primary bottleneck has shifted slightly.
 
 1. **Completed functional pipeline** that performs:
    - Video frame extraction
-   - Player detection using RTMDet
+   - Player detection using RTMDet or RT-DETR
    - Player tracking using ByteTrack
    - Pose estimation using RTMPose (**now with batch processing**)
    - Output generation (video overlay and HDF5 data)
 
-2. **Optimized Preprocessing**: Implemented OpenCV-based normalization in `RTMDet` and `RTMPose` preprocessing, significantly reducing preprocessing time. (~17ms det, ~20ms pose baseline achieved).
+2. **Optimized Preprocessing**: Implemented OpenCV-based normalization in `RTMDet`, `RTMPose`, and **RT-DETR** preprocessing, significantly reducing preprocessing time through cv2 in-place operations.
 
 3. **Implemented Batch Pose Estimation**: Modified `RTMPose` and `BaseTool` to process all detected bounding boxes in a single batch, reducing pose estimation time to ~11ms.
 
@@ -91,12 +110,22 @@ Focus remains on performance, but the primary bottleneck has shifted slightly.
 13. **RT-DETR ONNX Integration**: Successfully integrated RT-DETRv2 ONNX detector with robust coordinate handling:
     - Model outputs confirmed: ['labels', 'boxes', 'scores'] with boxes in xyxy format
     - Added orig_target_sizes input handling (int64, shape (1,2), (H,W)) - set to model input size (640,640) to ensure proper letterbox coordinate output
-    - Person class filtering (COCO=0), confidence threshold 0.30, and NMS implemented
+    - Person class filtering (COCO=0), confidence threshold 0.70 (increased from 0.30), and NMS implemented
     - **Fixed coordinate scaling issues**: RT-DETR outputs letterbox-space coordinates that require reverse-letterbox transformation
     - **Corrected letterbox preprocessing**: Fixed width/height axis confusion in letterbox resize and padding calculations
     - Implemented reverse-letterbox transformation: b' = (b - pad) / scale to convert from model space to original frame space
     - Added first-frame debug logging and validation assertions
-    - **Result**: Boxes now properly positioned on players across the full video processing (42.6s for complete video vs early crash)
+    - **Result**: Boxes now properly positioned on players across the full video processing
+
+14. **RT-DETR Preprocessing Optimization**: Applied cv2-based normalization optimization to RT-DETR:
+    - Replaced NumPy operations with cv2.subtract() and cv2.divide() in-place operations
+    - Eliminated BGR→RGB conversion (model accepts BGR input)
+    - Removed division by 255, work directly in 0-255 range
+    - Updated normalization constants from RGB 0-1 to BGR 0-255 format
+    - Added copy=False flag to avoid memory allocation
+    - **Performance gain**: Preprocessing reduced from 10.5ms to 4.3ms (2.4x speedup)
+    - **Overall detection**: Reduced from 30.5ms to 23.7ms (22% faster)
+    - RT-DETR now competitive with RTMDet (1.25x slower vs 2x slower before)
 
 ## Next Steps
 

@@ -30,7 +30,7 @@ ensure_output_dirs()
 record_output = True
 IN_VIDEO_FILE = 'SAMPLE_17_01_2025_C2_S1.mp4'
 # Reset output filename to avoid confusion with interval tests
-OUT_VIDEO_FILE = 'SAMPLE_17_01_2025_C2_S1_detR-L_pose-M_0508.mp4'
+OUT_VIDEO_FILE = 'SAMPLE_17_01_2025_C2_S1_detr-l_pose-M.mp4'
 resize_output = False
 resize_width = 960
 resize_height = 540
