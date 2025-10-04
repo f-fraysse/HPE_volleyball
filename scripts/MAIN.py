@@ -1,6 +1,7 @@
 import h5py
 import cv2
 import os
+import sys
 import time
 import numpy as np
 import csv
@@ -12,14 +13,24 @@ from rtmlib import RTMDet, RTMPose, YOLOX, draw_skeleton
 from yolox.tracker.byte_tracker import BYTETracker
 from paths import MODEL_DIR, DATA_DIR, OUTPUT_VIDEO_DIR, OUTPUT_H5_DIR, ensure_output_dirs
 
+# Add project root to path for pipeline imports
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+# Pipeline components
+from pipeline.detector_base import create_detector
+from pipeline.tracker_adapter import create_tracker, update_tracker
+from pipeline.pose_adapter import create_pose_estimator, estimate_pose
+
 ensure_output_dirs()
 
 #---------- CONFIGURATION ------------------
 # Video Paths
-record_output = False
-IN_VIDEO_FILE = 'SAMPLE_LONG.mp4'
+record_output = True
+IN_VIDEO_FILE = 'SAMPLE_17_01_2025_C2_S1.mp4'
 # Reset output filename to avoid confusion with interval tests
-OUT_VIDEO_FILE = 'SAMPLE_LONG_det-M_pose-M_0508.mp4'
+OUT_VIDEO_FILE = 'SAMPLE_17_01_2025_C2_S1_detR-L_pose-M_0508.mp4'
 resize_output = False
 resize_width = 960
 resize_height = 540
@@ -29,10 +40,12 @@ record_results = False
 OUT_H5_FILE = "SAMPLE_LONG_det-M_pose-M_track-EveryFrame.h5"
 
 # Profiling
-record_profiling = False
+record_profiling = True
 
 # Detection and tracking models
+DETECTOR = 'rtdetr'  # Options: 'rtmdet', 'rtdetr'
 RTMDET_MODEL = 'rtmdet-m-640.onnx'
+RTDETR_MODEL = 'rtdetrv2_r50vd_640.onnx'  # large
 RTMPOSE_MODEL = 'rtmpose-m-256-192.onnx'
 
 # RTMPose engine
@@ -88,7 +101,13 @@ if record_profiling:
 
 
 # Make the full path + file names
-RTMDET_MODEL = os.path.join(MODEL_DIR, RTMDET_MODEL)
+if DETECTOR == 'rtmdet':
+    DETECTOR_MODEL = os.path.join(MODEL_DIR, RTMDET_MODEL)
+elif DETECTOR == 'rtdetr':
+    DETECTOR_MODEL = os.path.join(MODEL_DIR, RTDETR_MODEL)
+else:
+    raise ValueError(f"Unsupported detector: {DETECTOR}")
+
 RTMPOSE_MODEL = os.path.join(MODEL_DIR, RTMPOSE_MODEL)
 IN_VIDEO_FILE = os.path.join(DATA_DIR, IN_VIDEO_FILE)
 OUT_VIDEO_FILE = os.path.join(OUTPUT_VIDEO_DIR, OUT_VIDEO_FILE)
@@ -113,31 +132,14 @@ if record_output:
     else:
         out = cv2.VideoWriter(OUT_VIDEO_FILE, fourcc, fps, (width, height))
 
-# Init detector
-detector = RTMDet(
-    onnx_model=RTMDET_MODEL,
-    model_input_size=(640, 640),
-    backend=backend,
-    device=device
-)
+# Init detector using factory
+detector = create_detector(DETECTOR, DETECTOR_MODEL, device, backend)
 
-# Init ByteTrack tracker
-args = Namespace(
-    track_thresh=0.5,
-    match_thresh=0.8,
-    track_buffer=30, # Keep original buffer setting
-    frame_rate=fps,
-    mot20=False,
-    min_hits=3
-)
-tracker = BYTETracker(args)
+# Init ByteTrack tracker using adapter
+tracker = create_tracker(track_thresh=0.5, match_thresh=0.8, track_buffer=30, frame_rate=fps)
 
-# init pose detector
-pose_estimator = RTMPose(
-            onnx_model=RTMPOSE_MODEL,
-            model_input_size = (192, 256),
-            backend=backend,
-            device=device)
+# Init pose detector using adapter
+pose_estimator = create_pose_estimator(RTMPOSE_MODEL, device, backend)
 
 # ------------ START LOOP OVER FRAMES --------------
 frame_id = 0
@@ -179,7 +181,7 @@ while cap.isOpened():
         dets_for_tracker = np.empty((0, 6))
 
     # Step 3: Tracking
-    tracks = tracker.update(dets_for_tracker, [height, width], (height, width))
+    tracks = update_tracker(tracker, dets_for_tracker, [height, width], (height, width))
     track_time = time.perf_counter()
 
     # Step 4: Prepare data for Pose Estimation and Drawing (directly from tracker output)
@@ -213,7 +215,7 @@ while cap.isOpened():
     scores_list = []
 
     if len(tracked_bboxes) > 0:
-        keypoints_list, scores_list, pose_timing = pose_estimator(frame, tracked_bboxes)
+        keypoints_list, scores_list, pose_timing = estimate_pose(pose_estimator, frame, tracked_bboxes)
         # Update pose timing statistics
         if record_profiling:
             for key in pose_timing:

@@ -30,15 +30,37 @@ flowchart TD
 
 ### 2. Player Detection
 
-- **Model**: RTMDet (from OpenMMLab)
-- **Format**: ONNX model running on ONNX Runtime with CUDA backend
+- **Architecture**: Modular detector system with pluggable implementations
+- **Supported Models**:
+  - RTMDet (from OpenMMLab) - Current baseline
+  - RT-DETR (from lyuwenyu/RT-DETR) - Alternative for testing
+- **Format**: ONNX models running on ONNX Runtime with CUDA backend
 - **Input**: Full video frames
-- **Output**: Bounding boxes with confidence scores
-- **Implementation**: Uses RTMlib's RTMDet wrapper
-- **Process Flow**:
-  - Preprocessing (resize, normalize)
+- **Output**: Bounding boxes with confidence scores (person class only)
+- **Implementation**: Detector protocol with adapter pattern
+  - `pipeline/detector_base.py`: Interface definition and factory
+  - `pipeline/detectors/rtmdet_onnx.py`: RTMDet implementation
+  - `pipeline/detectors/rtdetr_onnx.py`: RT-DETR implementation
+- **Process Flow** (per detector):
+  - Preprocessing (resize, normalize, format conversion)
   - ONNX inference session
-  - Postprocessing (decode predictions, NMS)
+  - Postprocessing (decode predictions, NMS, class filtering)
+- **Selection**: Configurable via `DETECTOR = 'rtmdet' | 'rtdetr'` in `scripts/MAIN.py`
+
+### RT-DETR Output Semantics
+
+- **Output Format**: ['labels', 'boxes', 'scores']
+  - labels: shape (N,), int64; class labels for each detection
+  - boxes: shape (N,4), float32; bounding boxes in xyxy format
+  - scores: shape (N,), float32; confidence scores
+- **Coordinate Frame Handling**:
+  - The graph may output letterbox-space coordinates depending on export/runtime flags
+  - Postprocess must auto-detect coordinate space:
+    - If max(box) ≤ 1.5 × model_input_size: treat as letterbox space → apply reverse-letterbox (b' = (b - pad)/scale)
+    - Else treat as absolute coordinates → only clip to original frame dimensions [0,W]/[0,H]
+- **Input Requirements**:
+  - orig_target_sizes (int64, shape (1,2), (H,W)) may be required as a secondary input for some exports
+  - This input changes decoder behavior and may affect coordinate frame of outputs
 
 ### 3. Player Tracking
 
@@ -148,32 +170,46 @@ classDiagram
     class VideoReader {
         +read_frame()
     }
-    
+
     class Detector {
+        <<interface>>
+        +__call__(frame)
+    }
+
+    class RTMDetDetector {
         +RTMDet model
         +preprocess(frame)
         +inference(preprocessed)
         +postprocess(outputs)
     }
-    
+
+    class RTDetrDetector {
+        +ONNX Runtime session
+        +preprocess(frame)
+        +inference(preprocessed)
+        +postprocess(outputs)
+    }
+
     class Tracker {
         +BYTETracker
         +update(detections)
     }
-    
+
     class PoseEstimator {
         +RTMPose model
         +preprocess(frame, bboxes)
         +inference(preprocessed)
         +postprocess(outputs)
     }
-    
+
     class OutputManager {
         +save_visualization(frame, tracks, poses)
         +save_data(tracks, poses)
     }
-    
+
     VideoReader --> Detector : frame
+    Detector <|-- RTMDetDetector : implements
+    Detector <|-- RTDetrDetector : implements
     Detector --> Tracker : detections
     Tracker --> PoseEstimator : tracked bboxes
     PoseEstimator --> OutputManager : poses

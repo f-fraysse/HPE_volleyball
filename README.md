@@ -67,11 +67,19 @@ I have rewritten the normalisation step. See [notes here](misc project docs/opti
 ```
 HPE_volleyball/
 ├── ByteTrack/           # Forked + modified ByteTrack repo (tracking)
-├── models/              # model files (.onnx) for RTMPose and RTMDet
+├── models/              # model files (.onnx) for RTMPose, RTMDet, RT-DETR
 ├── data/                # Input videos
 ├── output/
 │   ├── h5/              # HDF5 outputs: IDs, bboxes, keypoints, scores
 │   └── video/           # Output videos with overlays
+├── pipeline/            # Modular pipeline components
+│   ├── detector_base.py # Detector interface and factory
+│   ├── detectors/       # Detector implementations
+│   │   ├── rtmdet_onnx.py   # RTMDet ONNX adapter
+│   │   └── rtdetr_onnx.py   # RT-DETR ONNX adapter
+│   ├── tracker_adapter.py   # ByteTrack wrapper
+│   ├── pose_adapter.py      # RTMPose wrapper
+│   └── profiling.py         # Profiling utilities
 ├── scripts/             # Custom scripts (main pipeline, helpers)
 ├── paths.py             # Project-relative path definitions
 └── requirements.txt     # Python dependencies
@@ -151,15 +159,32 @@ Confirmed to work with CUDA 12.6 + CUDNN 9.8 on GTX 4060
 
 Work in progress — main script(s) will be located in `scripts/`.
 
+### Basic Setup
+
 1. add your input video to /data
 2. add your ONNX models to /models :
-      - download ONNX models from OpenMMLab Deployee: https://platform.openmmlab.com/deploee 
+      - download ONNX models from OpenMMLab Deployee: https://platform.openmmlab.com/deploee
       - RTMDet model for detection
       - RTMPose model for pose estimation
       - M-size models seem to provide a good balance of performance and speed ( RTMDet-m, RTMPose-m)
 3. run **scripts/MAIN.py**, the start of the script has config options
 4. video file with overlaid bboxes, IDs, bbox scores and poses saved in output/video
 5. HDF5 file with tracked IDs, bboxes and scores, keypoints and scores saved in output/h5
+
+### Detector Selection
+
+The pipeline supports pluggable detectors. To switch between detectors:
+
+1. **RTMDet (default)**: Set `DETECTOR = 'rtmdet'` in `scripts/MAIN.py`
+   - Uses RTMDet ONNX models from OpenMMLab
+   - Current baseline: ~19ms detection time
+
+2. **RT-DETR**: Set `DETECTOR = 'rtdetr'` in `scripts/MAIN.py`
+   - Uses RT-DETR ONNX models (must be exported first)
+   - See [RT-DETR ONNX Export Guide](misc project docs/rtdetr_onnx_export_guide.md)
+   - Potential for better real-time performance than RTMDet
+
+The modular pipeline ensures consistent output format and profiling regardless of detector choice.
 
 ## 📦 Dependencies
 

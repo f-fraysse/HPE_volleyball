@@ -4,6 +4,8 @@
 
 The current focus of the HPE_volleyball project is **performance optimization** of the inference pipeline. While the detection-tracking-pose pipeline is functionally complete and produces accurate results, the processing speed needs significant improvement to make the system more practical for real-world use.
 
+We have implemented a **modular detector architecture** to enable easy swapping between detection models while maintaining consistent interfaces and profiling. The pipeline now supports RTMDet (baseline) and RT-DETR (alternative) detectors running on ONNX Runtime.
+
 In addition to optimizing the existing RTMDet/RTMPose pipeline, we are also exploring an **alternative implementation using Ultralytics YOLO models** for detection, tracking, and pose estimation.
 
 ### Primary Optimization Goal
@@ -78,6 +80,23 @@ Focus remains on performance, but the primary bottleneck has shifted slightly.
 9. **Changed RTMlib handling** (remains active).
 10. **Reverted Detection Frequency Reduction**: Restored `scripts/MAIN.py` to run detection every frame due to tracking accuracy issues observed with infrequent detection.
 11. **Refactored Performance Profiling**: Cleaned up timing measurements in `scripts/MAIN.py`, added specific timings for CSV writing and final display steps, updated on-screen/CSV/terminal outputs for clarity and consistency (including tab alignment and first-frame exclusion for stats).
+
+12. **Implemented Modular Detector Architecture**: Created a pluggable detector system with consistent interfaces:
+    - `pipeline/detector_base.py`: Detector protocol and factory
+    - `pipeline/detectors/rtmdet_onnx.py`: RTMDet adapter (preserves current behavior)
+    - `pipeline/detectors/rtdetr_onnx.py`: RT-DETR ONNX adapter (ready for testing)
+    - Updated `scripts/MAIN.py` to select detector via `DETECTOR = 'rtmdet' | 'rtdetr'` config
+    - Maintains identical output format and profiling regardless of detector choice
+
+13. **RT-DETR ONNX Integration**: Successfully integrated RT-DETRv2 ONNX detector with robust coordinate handling:
+    - Model outputs confirmed: ['labels', 'boxes', 'scores'] with boxes in xyxy format
+    - Added orig_target_sizes input handling (int64, shape (1,2), (H,W)) - set to model input size (640,640) to ensure proper letterbox coordinate output
+    - Person class filtering (COCO=0), confidence threshold 0.30, and NMS implemented
+    - **Fixed coordinate scaling issues**: RT-DETR outputs letterbox-space coordinates that require reverse-letterbox transformation
+    - **Corrected letterbox preprocessing**: Fixed width/height axis confusion in letterbox resize and padding calculations
+    - Implemented reverse-letterbox transformation: b' = (b - pad) / scale to convert from model space to original frame space
+    - Added first-frame debug logging and validation assertions
+    - **Result**: Boxes now properly positioned on players across the full video processing (42.6s for complete video vs early crash)
 
 ## Next Steps
 
