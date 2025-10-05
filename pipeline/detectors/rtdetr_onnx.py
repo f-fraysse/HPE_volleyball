@@ -20,7 +20,8 @@ class RTDetrONNXDetector:
 
     def __init__(self, model_path: str, device: str = "cuda", backend: str = "onnxruntime",
                  model_input_size: tuple[int, int] = (640, 640),
-                 conf_threshold: float = 0.7, nms_iou_threshold: float = 0.45):
+                 conf_threshold: float = 0.7, ball_conf_threshold: float = 0.3,
+                 nms_iou_threshold: float = 0.45):
         """
         Initialize RT-DETR detector.
 
@@ -29,11 +30,13 @@ class RTDetrONNXDetector:
             device: Device for inference ("cuda" or "cpu")
             backend: Backend ("onnxruntime")
             model_input_size: Input size for the model (width, height)
-            conf_threshold: Confidence threshold for detections
+            conf_threshold: Confidence threshold for person detections
+            ball_conf_threshold: Confidence threshold for sports ball detections
             nms_iou_threshold: IoU threshold for NMS
         """
         self.model_w, self.model_h = model_input_size
         self.conf_threshold = conf_threshold
+        self.ball_conf_threshold = ball_conf_threshold
         self.nms_iou_threshold = nms_iou_threshold
 
         # Set up ONNX Runtime session
@@ -53,7 +56,7 @@ class RTDetrONNXDetector:
         # Debug flag for first frame
         self.debug_first_frame = True
 
-    def __call__(self, frame: np.ndarray) -> tuple[np.ndarray, np.ndarray, dict[str, float]]:
+    def __call__(self, frame: np.ndarray) -> tuple[tuple[np.ndarray, np.ndarray, np.ndarray], dict[str, float]]:
         """
         Process a single frame with RT-DETR.
 
@@ -61,7 +64,7 @@ class RTDetrONNXDetector:
             frame: Input frame as numpy array (H, W, C) in BGR format
 
         Returns:
-            Tuple of (bboxes_xyxy, scores, timing_dict)
+            Tuple of ((bboxes_xyxy, scores, class_labels), timing_dict)
         """
         start_time = time.perf_counter()
 
@@ -90,7 +93,7 @@ class RTDetrONNXDetector:
 
         # Postprocessing
         postprocess_start = time.perf_counter()
-        bboxes_xyxy, scores = self._postprocess(outputs, scale, pad, frame.shape[:2])
+        bboxes_xyxy, scores, class_labels = self._postprocess(outputs, scale, pad, frame.shape[:2])
         postprocess_time = time.perf_counter() - postprocess_start
 
         total_time = time.perf_counter() - start_time
@@ -103,7 +106,7 @@ class RTDetrONNXDetector:
             'postprocess': postprocess_time
         }
 
-        return (bboxes_xyxy, scores), timing
+        return (bboxes_xyxy, scores, class_labels), timing
 
     def _preprocess(self, frame: np.ndarray) -> tuple[np.ndarray, float, tuple[int, int, int, int]]:
         """
@@ -153,7 +156,7 @@ class RTDetrONNXDetector:
         return input_tensor.astype(np.float32), scale, pad
 
     def _postprocess(self, outputs: list[np.ndarray], scale: float, pad: tuple[int, int, int, int],
-                    original_shape: tuple[int, int]) -> tuple[np.ndarray, np.ndarray]:
+                    original_shape: tuple[int, int]) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Postprocess RT-DETR outputs with robust coordinate space handling.
 
@@ -164,63 +167,91 @@ class RTDetrONNXDetector:
             original_shape: Original frame shape (H, W)
 
         Returns:
-            Tuple of (bboxes_xyxy, scores) for person class only
+            Tuple of (bboxes_xyxy, scores, class_labels) for person and sports ball classes
         """
         # RT-DETR outputs: ['labels', 'boxes', 'scores']
         labels = outputs[0][0]  # Shape: (num_queries,) - class labels
         boxes = outputs[1][0]   # Shape: (num_queries, 4) - xyxy coordinates
         scores = outputs[2][0]  # Shape: (num_queries,) - confidence scores
 
-        # Get person class (COCO class 0)
-        person_mask = labels == 0
-        if not person_mask.any():
-            return np.empty((0, 4), dtype=np.float32), np.empty((0,), dtype=np.float32)
+        # Get person (class 0) and sports ball (class 32)
+        target_mask = (labels == 0) | (labels == 32)
+        if not target_mask.any():
+            return np.empty((0, 4), dtype=np.float32), np.empty((0,), dtype=np.float32), np.empty((0,), dtype=np.int32)
 
-        person_boxes = boxes[person_mask]
-        person_scores = scores[person_mask]
+        target_boxes = boxes[target_mask]
+        target_scores = scores[target_mask]
+        target_labels = labels[target_mask]
 
         # First-frame debug logging
         if self.debug_first_frame:
             print(f"[RT-DETR] Original frame: H={original_shape[0]}, W={original_shape[1]}")
             print(f"[RT-DETR] Model input: H={self.model_h}, W={self.model_w}")
             print(f"[RT-DETR] Preprocessing: scale={scale:.3f}, pad=(w:{pad[0]}, h:{pad[1]}, new_w:{pad[2]}, new_h:{pad[3]})")
-            print(f"[RT-DETR] Raw boxes range: x1=[{person_boxes[:,0].min():.1f}, {person_boxes[:,0].max():.1f}], "
-                  f"y1=[{person_boxes[:,1].min():.1f}, {person_boxes[:,1].max():.1f}], "
-                  f"x2=[{person_boxes[:,2].min():.1f}, {person_boxes[:,2].max():.1f}], "
-                  f"y2=[{person_boxes[:,3].min():.1f}, {person_boxes[:,3].max():.1f}]")
+            print(f"[RT-DETR] Raw boxes range: x1=[{target_boxes[:,0].min():.1f}, {target_boxes[:,0].max():.1f}], "
+                  f"y1=[{target_boxes[:,1].min():.1f}, {target_boxes[:,1].max():.1f}], "
+                  f"x2=[{target_boxes[:,2].min():.1f}, {target_boxes[:,2].max():.1f}], "
+                  f"y2=[{target_boxes[:,3].min():.1f}, {target_boxes[:,3].max():.1f}]")
 
         # RT-DETR models typically output letterbox-space coordinates
         # Always apply reverse-letterbox transformation
         pad_w, pad_h, new_w, new_h = pad
-        person_boxes[:, [0, 2]] = (person_boxes[:, [0, 2]] - pad_w) / scale
-        person_boxes[:, [1, 3]] = (person_boxes[:, [1, 3]] - pad_h) / scale
+        target_boxes[:, [0, 2]] = (target_boxes[:, [0, 2]] - pad_w) / scale
+        target_boxes[:, [1, 3]] = (target_boxes[:, [1, 3]] - pad_h) / scale
 
         if self.debug_first_frame:
-            print(f"[RT-DETR] After reverse-letterbox: x1=[{person_boxes[:,0].min():.1f}, {person_boxes[:,0].max():.1f}], "
-                  f"y1=[{person_boxes[:,1].min():.1f}, {person_boxes[:,1].max():.1f}], "
-                  f"x2=[{person_boxes[:,2].min():.1f}, {person_boxes[:,2].max():.1f}], "
-                  f"y2=[{person_boxes[:,3].min():.1f}, {person_boxes[:,3].max():.1f}]")
+            print(f"[RT-DETR] After reverse-letterbox: x1=[{target_boxes[:,0].min():.1f}, {target_boxes[:,0].max():.1f}], "
+                  f"y1=[{target_boxes[:,1].min():.1f}, {target_boxes[:,1].max():.1f}], "
+                  f"x2=[{target_boxes[:,2].min():.1f}, {target_boxes[:,2].max():.1f}], "
+                  f"y2=[{target_boxes[:,3].min():.1f}, {target_boxes[:,3].max():.1f}]")
 
         # Clip to original frame bounds
-        bboxes = person_boxes.copy()
+        bboxes = target_boxes.copy()
         bboxes[:, [0, 2]] = np.clip(bboxes[:, [0, 2]], 0, original_shape[1])
         bboxes[:, [1, 3]] = np.clip(bboxes[:, [1, 3]], 0, original_shape[0])
 
-        # Filter by confidence
-        conf_mask = person_scores >= self.conf_threshold
+        # Filter by confidence (different thresholds for person vs ball)
+        person_mask = target_labels == 0
+        ball_mask = target_labels == 32
+        
+        person_conf_mask = person_mask & (target_scores >= self.conf_threshold)
+        ball_conf_mask = ball_mask & (target_scores >= self.ball_conf_threshold)
+        conf_mask = person_conf_mask | ball_conf_mask
+        
         bboxes = bboxes[conf_mask]
-        person_scores = person_scores[conf_mask]
+        target_scores = target_scores[conf_mask]
+        target_labels = target_labels[conf_mask]
 
         if len(bboxes) == 0:
             if self.debug_first_frame:
                 print("[RT-DETR] No boxes after confidence filtering")
                 self.debug_first_frame = False
-            return np.empty((0, 4), dtype=np.float32), np.empty((0,), dtype=np.float32)
+            return np.empty((0, 4), dtype=np.float32), np.empty((0,), dtype=np.float32), np.empty((0,), dtype=np.int32)
 
-        # Apply NMS
-        indices = self._nms(bboxes, person_scores, self.nms_iou_threshold)
-        bboxes = bboxes[indices]
-        person_scores = person_scores[indices]
+        # Apply NMS separately per class to avoid suppressing balls near persons
+        final_bboxes = []
+        final_scores = []
+        final_labels = []
+        
+        for class_id in [0, 32]:  # Person and sports ball
+            class_mask = target_labels == class_id
+            if not class_mask.any():
+                continue
+                
+            class_bboxes = bboxes[class_mask]
+            class_scores = target_scores[class_mask]
+            
+            indices = self._nms(class_bboxes, class_scores, self.nms_iou_threshold)
+            final_bboxes.append(class_bboxes[indices])
+            final_scores.append(class_scores[indices])
+            final_labels.append(np.full(len(indices), class_id, dtype=np.int32))
+        
+        if len(final_bboxes) == 0:
+            return np.empty((0, 4), dtype=np.float32), np.empty((0,), dtype=np.float32), np.empty((0,), dtype=np.int32)
+            
+        bboxes = np.vstack(final_bboxes)
+        target_scores = np.concatenate(final_scores)
+        target_labels = np.concatenate(final_labels)
 
         # Final assertions for first frame
         if self.debug_first_frame:
@@ -233,9 +264,13 @@ class RTDetrONNXDetector:
                 print(f"[RT-DETR] WARNING: {invalid_count} invalid boxes after postprocessing")
             else:
                 print(f"[RT-DETR] All {len(bboxes)} boxes are valid after postprocessing")
+            
+            person_count = np.sum(target_labels == 0)
+            ball_count = np.sum(target_labels == 32)
+            print(f"[RT-DETR] Detected {person_count} persons and {ball_count} sports balls")
             self.debug_first_frame = False
 
-        return bboxes, person_scores
+        return bboxes, target_scores, target_labels
 
     def _detect_coordinate_space(self, boxes: np.ndarray, original_shape: tuple[int, int]) -> str:
         """

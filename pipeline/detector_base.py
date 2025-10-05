@@ -37,7 +37,8 @@ class Detector(Protocol):
         ...
 
 
-def create_detector(detector_type: str, model_path: str, device: str = "cuda", backend: str = "onnxruntime") -> Detector:
+def create_detector(detector_type: str, model_path: str, device: str = "cuda", backend: str = "onnxruntime",
+                   ball_conf_threshold: float = 0.5) -> Detector:
     """
     Factory function to create detector instances.
 
@@ -46,6 +47,7 @@ def create_detector(detector_type: str, model_path: str, device: str = "cuda", b
         model_path: Path to the ONNX model file
         device: Device for inference ("cuda" or "cpu")
         backend: Backend for inference ("onnxruntime")
+        ball_conf_threshold: Confidence threshold for sports ball detections (rtdetr only)
 
     Returns:
         Detector instance
@@ -58,6 +60,6 @@ def create_detector(detector_type: str, model_path: str, device: str = "cuda", b
         return RTMDetONNXDetector(model_path, device, backend)
     elif detector_type == "rtdetr":
         from .detectors.rtdetr_onnx import RTDetrONNXDetector
-        return RTDetrONNXDetector(model_path, device, backend)
+        return RTDetrONNXDetector(model_path, device, backend, ball_conf_threshold=ball_conf_threshold)
     else:
         raise ValueError(f"Unsupported detector type: {detector_type}. Supported: 'rtmdet', 'rtdetr'")

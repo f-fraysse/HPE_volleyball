@@ -44,6 +44,7 @@ record_profiling = True
 
 # Detection and tracking models
 DETECTOR = 'rtdetr'  # Options: 'rtmdet', 'rtdetr'
+DISPLAY_BALL_DETECTIONS = False  # Only applies when using RT-DETR
 RTMDET_MODEL = 'rtmdet-m-640.onnx'
 RTDETR_MODEL = 'rtdetrv2_r50vd_640.onnx'  # large
 RTMPOSE_MODEL = 'rtmpose-m-256-192.onnx'
@@ -133,7 +134,7 @@ if record_output:
         out = cv2.VideoWriter(OUT_VIDEO_FILE, fourcc, fps, (width, height))
 
 # Init detector using factory
-detector = create_detector(DETECTOR, DETECTOR_MODEL, device, backend)
+detector = create_detector(DETECTOR, DETECTOR_MODEL, device, backend, ball_conf_threshold=0.5)
 
 # Init ByteTrack tracker using adapter
 tracker = create_tracker(track_thresh=0.5, match_thresh=0.8, track_buffer=30, frame_rate=fps)
@@ -164,8 +165,17 @@ while cap.isOpened():
     cap_time = time.perf_counter()
 
     # Step 1: Detection (runs every frame)
-    det_bboxes_scores, det_timing = detector(frame)  # [x1, y1, x2, y2, conf]
-    det_bboxes, det_scores = det_bboxes_scores
+    det_results, det_timing = detector(frame)
+    
+    # Handle different detector return formats
+    if len(det_results) == 3:
+        # RT-DETR returns (bboxes, scores, class_labels)
+        det_bboxes, det_scores, det_classes = det_results
+    else:
+        # RTMDet returns (bboxes, scores) - all are persons
+        det_bboxes, det_scores = det_results
+        det_classes = np.zeros(len(det_bboxes), dtype=np.int32)  # All class 0 (person)
+    
     det_time = time.perf_counter()
 
     # Update detection timing statistics
@@ -174,9 +184,19 @@ while cap.isOpened():
             if key in det_timing_stats:
                 det_timing_stats[key].append(det_timing[key])
 
-    # Step 2: Format for ByteTrack
-    if len(det_bboxes) > 0:
-        dets_for_tracker = np.array([[*box, score, 0] for box, score in zip(det_bboxes, det_scores)])
+    # Step 2: Separate person and ball detections
+    person_mask = det_classes == 0
+    ball_mask = det_classes == 32
+    
+    person_bboxes = det_bboxes[person_mask] if person_mask.any() else np.empty((0, 4))
+    person_scores = det_scores[person_mask] if person_mask.any() else np.empty((0,))
+    
+    ball_bboxes = det_bboxes[ball_mask] if ball_mask.any() else np.empty((0, 4))
+    ball_scores = det_scores[ball_mask] if ball_mask.any() else np.empty((0,))
+    
+    # Format person detections for ByteTrack (only track persons)
+    if len(person_bboxes) > 0:
+        dets_for_tracker = np.array([[*box, score, 0] for box, score in zip(person_bboxes, person_scores)])
     else:
         dets_for_tracker = np.empty((0, 6))
 
@@ -265,7 +285,7 @@ while cap.isOpened():
             line_width=2
         )
 
-    # Draw bboxes and ID labels (using bbox_rects from Step 4)
+    # Draw person bboxes and ID labels (using bbox_rects from Step 4)
     for (x1, y1, x2, y2, track_id, score) in bbox_rects:
         img_show = cv2.rectangle(img_show, (int(x1), int(y1)), (int(x2), int(y2)), (255, 0, 0), 2) # Blue boxes
 
@@ -275,6 +295,14 @@ while cap.isOpened():
 
         img_show = cv2.putText(img_show, label, (int(x1), int(y1) - 5),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2) # Blue text
+    
+    # Draw ball bboxes in RED (only if enabled)
+    if DISPLAY_BALL_DETECTIONS:
+        for (x1, y1, x2, y2), score in zip(ball_bboxes, ball_scores):
+            img_show = cv2.rectangle(img_show, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)  # Red boxes
+            label = f"Ball | {score:.2f}"
+            img_show = cv2.putText(img_show, label, (int(x1), int(y1) - 5),
+                                  cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)  # Red text
 
     # Timing info calculation
     disp_time = time.perf_counter() # End of drawing skeletons/bboxes
