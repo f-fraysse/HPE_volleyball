@@ -9,6 +9,12 @@
    - State-of-the-art models for object detection and pose estimation
    - Accessed through RTMlib Python package
 
+2. **RF-DETR**
+   - Real-time object detection model from Roboflow
+   - State-of-the-art accuracy (54.7 AP on COCO)
+   - Expected ~4.5ms latency for Medium model
+   - ONNX model uses 1-indexed classes (requires special handling)
+
 2. **Ultralytics YOLO (Alternative Implementation)**
    - YOLOv8/YOLO11 models for object detection and pose estimation
    - Python API for easy integration

@@ -32,9 +32,10 @@ flowchart TD
 
 - **Architecture**: Modular detector system with pluggable implementations
 - **Supported Models**:
-  - RTMDet (from OpenMMLab) - Current baseline, fastest
-  - RT-DETR (from lyuwenyu/RT-DETR) - Alternative, good accuracy
-  - YOLOX (from Megvii-BaseDetection) - Third option, comparable speed to RTMDet
+  - RTMDet (from OpenMMLab) - Current baseline, fastest at ~19ms
+  - RT-DETR (from lyuwenyu/RT-DETR) - Alternative, good accuracy at ~23.7ms
+  - YOLOX (from Megvii-BaseDetection) - Third option, comparable speed to RTMDet at ~19.6ms
+  - RF-DETR (from Roboflow) - Newest, expected ~4.5ms, highest accuracy (54.7 AP on COCO)
 - **Format**: ONNX models running on ONNX Runtime with CUDA backend
 - **Input**: Full video frames
 - **Output**: Bounding boxes with confidence scores (person and sports ball classes)
@@ -47,7 +48,26 @@ flowchart TD
   - Preprocessing (resize, normalize/format conversion)
   - ONNX inference session
   - Postprocessing (decode predictions, NMS, class filtering)
-- **Selection**: Configurable via `DETECTOR = 'rtmdet' | 'rtdetr' | 'yolox'` in `scripts/MAIN.py`
+- **Selection**: Configurable via `DETECTOR = 'rtmdet' | 'rtdetr' | 'yolox' | 'rfdetr'` in `scripts/MAIN.py`
+
+### RF-DETR Output Semantics & Class Indexing
+
+- **Output Format**: ['dets', 'labels']
+  - dets: shape (N,4), float32; bounding boxes in [cx, cy, w, h] format, normalized [0, 1]
+  - labels: shape (N,91), float32; raw logits for 91 COCO classes
+- **Critical Implementation Detail**: RF-DETR ONNX model uses **1-indexed classes**
+  - Class 1 = person (not class 0 as in standard COCO)
+  - Class 33 = sports ball (not class 32 as in standard COCO)
+  - Adapter converts back to 0-indexed (subtract 1) for consistency with other detectors
+- **Postprocessing Requirements**:
+  - Apply softmax to logits to get confidence scores
+  - Convert [cx, cy, w, h] normalized → [x1, y1, x2, y2] pixel coordinates
+  - Scale from normalized [0,1] to letterbox pixel space
+  - Apply reverse-letterbox transformation to original frame coordinates
+- **Model Specifications**:
+  - RF-DETR Medium: 576x576 input size (not 640x640)
+  - Expected latency: ~4.5ms
+  - Accuracy: 54.7 AP on COCO (highest of all supported detectors)
 
 ### RT-DETR Output Semantics
 
