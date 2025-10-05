@@ -73,7 +73,7 @@ class RTDetrONNXDetector:
         input_tensor, scale, pad = self._preprocess(frame)
         preprocess_time = time.perf_counter() - preprocess_start
 
-        # Inference
+        # Inference (prep is building input feed dict)
         prep_start = time.perf_counter()
 
         # Build input feed for ORT
@@ -86,10 +86,12 @@ class RTDetrONNXDetector:
             model_sizes = np.array([[self.model_h, self.model_w]], dtype=np.int64)
             input_feed["orig_target_sizes"] = model_sizes
 
-        outputs = self.session.run(self.output_names, input_feed)
         prep_time = time.perf_counter() - prep_start
 
-        model_time = prep_time  # For now, combine prep and model; can split if needed
+        # Model inference
+        model_start = time.perf_counter()
+        outputs = self.session.run(self.output_names, input_feed)
+        model_time = time.perf_counter() - model_start
 
         # Postprocessing
         postprocess_start = time.perf_counter()
@@ -98,12 +100,13 @@ class RTDetrONNXDetector:
 
         total_time = time.perf_counter() - start_time
 
+        # Convert all timings to milliseconds
         timing = {
-            'total': total_time,
-            'preprocess': preprocess_time,
-            'prep': prep_time,
-            'model': model_time,
-            'postprocess': postprocess_time
+            'total': total_time * 1000,
+            'preprocess': preprocess_time * 1000,
+            'prep': prep_time * 1000,
+            'model': model_time * 1000,
+            'postprocess': postprocess_time * 1000
         }
 
         return (bboxes_xyxy, scores, class_labels), timing

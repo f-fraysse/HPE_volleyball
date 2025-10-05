@@ -108,6 +108,16 @@
    - **Overall detection**: 30.5ms → 23.7ms (22% faster)
    - RT-DETR now competitive with RTMDet (1.25x slower vs 2x before)
 
+10. **YOLOX Integration** ✅
+   - Successfully integrated YOLOX-L as a third detector option
+   - Created `pipeline/detectors/yolox_onnx.py` with stride-based grid decoding
+   - Implemented proper coordinate transformation from YOLOX's unique output format
+   - Letterbox preprocessing without normalization (0-255 range)
+   - Per-class NMS for person and sports ball detection
+   - **Performance**: ~19.6ms detection (comparable to RTMDet)
+   - Fixed timing statistics for all three detectors (YOLOX, RT-DETR, RTMDet)
+   - Updated `scripts/MAIN.py` to support `DETECTOR = 'yolox'` option
+
 10. **YOLO-based Alternative Implementation** 🟡
    - Created `scripts/MAIN_YOLO.py` with the same pipeline structure
    - Implemented detection using YOLOv8/YOLO11 models

@@ -43,11 +43,11 @@ def create_detector(detector_type: str, model_path: str, device: str = "cuda", b
     Factory function to create detector instances.
 
     Args:
-        detector_type: Type of detector ("rtmdet" or "rtdetr")
+        detector_type: Type of detector ("rtmdet", "rtdetr", or "yolox")
         model_path: Path to the ONNX model file
         device: Device for inference ("cuda" or "cpu")
         backend: Backend for inference ("onnxruntime")
-        ball_conf_threshold: Confidence threshold for sports ball detections (rtdetr only)
+        ball_conf_threshold: Confidence threshold for sports ball detections (rtdetr and yolox)
 
     Returns:
         Detector instance
@@ -61,5 +61,8 @@ def create_detector(detector_type: str, model_path: str, device: str = "cuda", b
     elif detector_type == "rtdetr":
         from .detectors.rtdetr_onnx import RTDetrONNXDetector
         return RTDetrONNXDetector(model_path, device, backend, ball_conf_threshold=ball_conf_threshold)
+    elif detector_type == "yolox":
+        from .detectors.yolox_onnx import YOLOXONNXDetector
+        return YOLOXONNXDetector(model_path, device, backend, ball_conf_threshold=ball_conf_threshold)
     else:
-        raise ValueError(f"Unsupported detector type: {detector_type}. Supported: 'rtmdet', 'rtdetr'")
+        raise ValueError(f"Unsupported detector type: {detector_type}. Supported: 'rtmdet', 'rtdetr', 'yolox'")

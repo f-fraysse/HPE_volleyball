@@ -43,10 +43,11 @@ OUT_H5_FILE = "SAMPLE_LONG_det-M_pose-M_track-EveryFrame.h5"
 record_profiling = True
 
 # Detection and tracking models
-DETECTOR = 'rtdetr'  # Options: 'rtmdet', 'rtdetr'
-DISPLAY_BALL_DETECTIONS = False  # Only applies when using RT-DETR
+DETECTOR = 'yolox'  # Options: 'rtmdet', 'rtdetr', 'yolox'
+DISPLAY_BALL_DETECTIONS = False  # Only applies when using RT-DETR or YOLOX
 RTMDET_MODEL = 'rtmdet-m-640.onnx'
 RTDETR_MODEL = 'rtdetrv2_r50vd_640.onnx'  # large
+YOLOX_MODEL = 'yolox_l.onnx'
 RTMPOSE_MODEL = 'rtmpose-m-256-192.onnx'
 
 # RTMPose engine
@@ -106,6 +107,8 @@ if DETECTOR == 'rtmdet':
     DETECTOR_MODEL = os.path.join(MODEL_DIR, RTMDET_MODEL)
 elif DETECTOR == 'rtdetr':
     DETECTOR_MODEL = os.path.join(MODEL_DIR, RTDETR_MODEL)
+elif DETECTOR == 'yolox':
+    DETECTOR_MODEL = os.path.join(MODEL_DIR, YOLOX_MODEL)
 else:
     raise ValueError(f"Unsupported detector: {DETECTOR}")
 

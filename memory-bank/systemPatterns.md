@@ -32,20 +32,22 @@ flowchart TD
 
 - **Architecture**: Modular detector system with pluggable implementations
 - **Supported Models**:
-  - RTMDet (from OpenMMLab) - Current baseline
-  - RT-DETR (from lyuwenyu/RT-DETR) - Alternative for testing
+  - RTMDet (from OpenMMLab) - Current baseline, fastest
+  - RT-DETR (from lyuwenyu/RT-DETR) - Alternative, good accuracy
+  - YOLOX (from Megvii-BaseDetection) - Third option, comparable speed to RTMDet
 - **Format**: ONNX models running on ONNX Runtime with CUDA backend
 - **Input**: Full video frames
-- **Output**: Bounding boxes with confidence scores (person class only)
+- **Output**: Bounding boxes with confidence scores (person and sports ball classes)
 - **Implementation**: Detector protocol with adapter pattern
   - `pipeline/detector_base.py`: Interface definition and factory
   - `pipeline/detectors/rtmdet_onnx.py`: RTMDet implementation
   - `pipeline/detectors/rtdetr_onnx.py`: RT-DETR implementation
+  - `pipeline/detectors/yolox_onnx.py`: YOLOX implementation with stride-based grid decoding
 - **Process Flow** (per detector):
-  - Preprocessing (resize, normalize, format conversion)
+  - Preprocessing (resize, normalize/format conversion)
   - ONNX inference session
   - Postprocessing (decode predictions, NMS, class filtering)
-- **Selection**: Configurable via `DETECTOR = 'rtmdet' | 'rtdetr'` in `scripts/MAIN.py`
+- **Selection**: Configurable via `DETECTOR = 'rtmdet' | 'rtdetr' | 'yolox'` in `scripts/MAIN.py`
 
 ### RT-DETR Output Semantics
 
@@ -190,6 +192,14 @@ classDiagram
         +postprocess(outputs)
     }
 
+    class YOLOXDetector {
+        +ONNX Runtime session
+        +preprocess(frame)
+        +inference(preprocessed)
+        +decode_outputs(outputs)
+        +postprocess(outputs)
+    }
+
     class Tracker {
         +BYTETracker
         +update(detections)
@@ -210,6 +220,7 @@ classDiagram
     VideoReader --> Detector : frame
     Detector <|-- RTMDetDetector : implements
     Detector <|-- RTDetrDetector : implements
+    Detector <|-- YOLOXDetector : implements
     Detector --> Tracker : detections
     Tracker --> PoseEstimator : tracked bboxes
     PoseEstimator --> OutputManager : poses

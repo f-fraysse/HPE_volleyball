@@ -55,12 +55,13 @@ class RTMDetONNXDetector:
         total_time = time.perf_counter() - start_time
 
         # Ensure timing dict has all required keys (rtmlib may provide some)
+        # Convert all timings to milliseconds
         full_timing = {
-            'total': total_time,
-            'preprocess': timing.get('preprocess', 0.0),
-            'prep': timing.get('prep', 0.0),
-            'model': timing.get('model', 0.0),
-            'postprocess': timing.get('postprocess', 0.0)
+            'total': total_time * 1000,
+            'preprocess': timing.get('preprocess', 0.0) * 1000,
+            'prep': timing.get('prep', 0.0) * 1000,
+            'model': timing.get('model', 0.0) * 1000,
+            'postprocess': timing.get('postprocess', 0.0) * 1000
         }
 
         return (bboxes_xyxy, scores), full_timing

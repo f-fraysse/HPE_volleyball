@@ -4,7 +4,10 @@
 
 The current focus of the HPE_volleyball project is **performance optimization** of the inference pipeline. While the detection-tracking-pose pipeline is functionally complete and produces accurate results, the processing speed needs significant improvement to make the system more practical for real-world use.
 
-We have implemented a **modular detector architecture** to enable easy swapping between detection models while maintaining consistent interfaces and profiling. The pipeline now supports RTMDet (baseline) and RT-DETR (alternative) detectors running on ONNX Runtime.
+We have implemented a **modular detector architecture** to enable easy swapping between detection models while maintaining consistent interfaces and profiling. The pipeline now supports three detectors running on ONNX Runtime:
+- **RTMDet** (baseline, fastest)
+- **RT-DETR** (alternative, good accuracy)
+- **YOLOX** (third option, comparable speed to RTMDet)
 
 In addition to optimizing the existing RTMDet/RTMPose pipeline, we are also exploring an **alternative implementation using Ultralytics YOLO models** for detection, tracking, and pose estimation.
 
@@ -126,6 +129,18 @@ Successfully optimized RT-DETR preprocessing using the same cv2-based approach t
     - **Performance gain**: Preprocessing reduced from 10.5ms to 4.3ms (2.4x speedup)
     - **Overall detection**: Reduced from 30.5ms to 23.7ms (22% faster)
     - RT-DETR now competitive with RTMDet (1.25x slower vs 2x slower before)
+
+15. **YOLOX Integration**: Successfully integrated YOLOX as a third detector option:
+    - Created `pipeline/detectors/yolox_onnx.py` with complete ONNX Runtime implementation
+    - Implemented stride-based grid decoding (strides: 8, 16, 32) from YOLOX reference
+    - Handles YOLOX's unique output format: grid-relative coordinates + log-space dimensions
+    - Coordinate transformation: `(grid_offset + grids) * strides` for position, `exp(log_wh) * strides` for size
+    - Letterbox preprocessing without normalization (0-255 range)
+    - Per-class NMS for person (class 0) and sports ball (class 32)
+    - **Performance**: ~19.6ms total detection (preprocessing: 2.1ms, model: 16.4ms, postprocess: 1.2ms)
+    - Updated `scripts/MAIN.py` to support `DETECTOR = 'yolox'` option
+    - Fixed timing statistics for all detectors (proper ms conversion)
+    - YOLOX-L comparable speed to RTMDet-M, though slightly lower detection quality
 
 ## Next Steps
 
