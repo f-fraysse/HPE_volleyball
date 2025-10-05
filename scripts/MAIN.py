@@ -30,7 +30,7 @@ ensure_output_dirs()
 record_output = True
 IN_VIDEO_FILE = 'SAMPLE_17_01_2025_C2_S1.mp4'
 # Reset output filename to avoid confusion with interval tests
-OUT_VIDEO_FILE = 'SAMPLE_17_01_2025_C2_S1_detr-l_pose-M.mp4'
+OUT_VIDEO_FILE = 'SAMPLE_17_01_2025_C2_S1_rfdetr-M_rtmpose-M.mp4'
 resize_output = False
 resize_width = 960
 resize_height = 540
@@ -43,11 +43,12 @@ OUT_H5_FILE = "SAMPLE_LONG_det-M_pose-M_track-EveryFrame.h5"
 record_profiling = True
 
 # Detection and tracking models
-DETECTOR = 'yolox'  # Options: 'rtmdet', 'rtdetr', 'yolox'
-DISPLAY_BALL_DETECTIONS = False  # Only applies when using RT-DETR or YOLOX
+DETECTOR = 'rfdetr'  # Options: 'rtmdet', 'rtdetr', 'yolox', 'rfdetr'
+DISPLAY_BALL_DETECTIONS = False  # Only applies when using RT-DETR, YOLOX, or RF-DETR
 RTMDET_MODEL = 'rtmdet-m-640.onnx'
 RTDETR_MODEL = 'rtdetrv2_r50vd_640.onnx'  # large
 YOLOX_MODEL = 'yolox_l.onnx'
+RFDETR_MODEL = 'rf-detr-M.onnx'  # medium
 RTMPOSE_MODEL = 'rtmpose-m-256-192.onnx'
 
 # RTMPose engine
@@ -109,6 +110,8 @@ elif DETECTOR == 'rtdetr':
     DETECTOR_MODEL = os.path.join(MODEL_DIR, RTDETR_MODEL)
 elif DETECTOR == 'yolox':
     DETECTOR_MODEL = os.path.join(MODEL_DIR, YOLOX_MODEL)
+elif DETECTOR == 'rfdetr':
+    DETECTOR_MODEL = os.path.join(MODEL_DIR, RFDETR_MODEL)
 else:
     raise ValueError(f"Unsupported detector: {DETECTOR}")
 
@@ -137,7 +140,15 @@ if record_output:
         out = cv2.VideoWriter(OUT_VIDEO_FILE, fourcc, fps, (width, height))
 
 # Init detector using factory
-detector = create_detector(DETECTOR, DETECTOR_MODEL, device, backend, ball_conf_threshold=0.5)
+# RF-DETR Medium uses 576x576 input size
+if DETECTOR == 'rfdetr':
+    from pipeline.detectors.rfdetr_onnx import RFDETRONNXDetector
+    detector = RFDETRONNXDetector(DETECTOR_MODEL, device, backend, 
+                                   model_input_size=(576, 576),
+                                   conf_threshold=0.8,  # Lower threshold for testing
+                                   ball_conf_threshold=0.1)  # Also lower ball threshold
+else:
+    detector = create_detector(DETECTOR, DETECTOR_MODEL, device, backend, ball_conf_threshold=0.5)
 
 # Init ByteTrack tracker using adapter
 tracker = create_tracker(track_thresh=0.5, match_thresh=0.8, track_buffer=30, frame_rate=fps)
