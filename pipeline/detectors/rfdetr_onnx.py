@@ -191,9 +191,9 @@ class RFDETRONNXDetector:
             print(f"[RF-DETR] Person (class 0) count: {np.sum(labels == 0)}, max score: {scores[labels == 0].max() if np.any(labels == 0) else 0:.6f}")
             print(f"[RF-DETR] Ball (class 32) count: {np.sum(labels == 32)}, max score: {scores[labels == 32].max() if np.any(labels == 32) else 0:.6f}")
 
-        # RF-DETR ONNX model uses 1-indexed classes (class 1 = person, class 33 = sports ball)
+        # RF-DETR ONNX model uses 1-indexed classes (class 1 = person, class 37 = sports ball)
         # This differs from standard COCO which is 0-indexed
-        target_mask = (labels == 1) | (labels == 33)
+        target_mask = (labels == 1) | (labels == 37)
         if not target_mask.any():
             return np.empty((0, 4), dtype=np.float32), np.empty((0,), dtype=np.float32), np.empty((0,), dtype=np.int32)
 
@@ -246,7 +246,7 @@ class RFDETRONNXDetector:
 
         # Filter by confidence (different thresholds for person vs ball)
         person_mask = target_labels == 0
-        ball_mask = target_labels == 32
+        ball_mask = target_labels == 36  # Class 37 (sports ball) becomes 36 after subtracting 1
         
         person_conf_mask = person_mask & (target_scores >= self.conf_threshold)
         ball_conf_mask = ball_mask & (target_scores >= self.ball_conf_threshold)
@@ -267,7 +267,7 @@ class RFDETRONNXDetector:
         final_scores = []
         final_labels = []
         
-        for class_id in [0, 32]:  # Person and sports ball
+        for class_id in [0, 36]:  # Person (0) and sports ball (36, which was 37 before -1 conversion)
             class_mask = target_labels == class_id
             if not class_mask.any():
                 continue
@@ -300,7 +300,7 @@ class RFDETRONNXDetector:
                 print(f"[RF-DETR] All {len(bboxes)} boxes are valid after postprocessing")
             
             person_count = np.sum(target_labels == 0)
-            ball_count = np.sum(target_labels == 32)
+            ball_count = np.sum(target_labels == 36)
             print(f"[RF-DETR] Detected {person_count} persons and {ball_count} sports balls")
             self.debug_first_frame = False
 

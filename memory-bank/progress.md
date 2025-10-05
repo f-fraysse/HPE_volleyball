@@ -121,20 +121,27 @@
 11. **RF-DETR Integration** ✅
    - Successfully integrated RF-DETR Medium as a fourth detector option
    - Created `pipeline/detectors/rfdetr_onnx.py` with complete ONNX Runtime implementation
-   - **Discovered and fixed critical class indexing issue**: RF-DETR ONNX uses 1-indexed classes (class 1 = person, class 33 = sports ball)
-   - Implemented class ID conversion to maintain 0-indexed consistency with other detectors
+   - **Discovered and fixed critical class indexing issues**:
+     - RF-DETR ONNX uses 1-indexed classes (not 0-indexed like standard COCO)
+     - **Correct mapping**: class 37 = sports ball (NOT class 33 as initially assumed!)
+     - Created inspection script (`scripts/inspect_rfdetr_classes.py`) to verify class mapping
+     - Fixed class IDs in `rfdetr_onnx.py` (33→37 for filtering, 32→36 after conversion)
+     - Fixed class ID in `MAIN.py` ball mask (32→36)
+   - Implemented class ID conversion (subtract 1) to maintain 0-indexed consistency
    - Handles RF-DETR's unique output format: normalized [cx, cy, w, h] boxes and raw logits
    - Implemented softmax application and coordinate transformation
    - Letterbox preprocessing with ImageNet normalization
    - **Model Specifications**: 576x576 input size
    - Updated `scripts/MAIN.py` to support `DETECTOR = 'rfdetr'` option
-   - **Test Results**:
-     - Person detection working well (confidence: 0.8, detected 5 persons in first frame)
-     - Coordinate transformation correct
-     - Performance: ~22.6ms detection (preprocessing: 3.7ms, model: 18.5ms)
-     - Overall pipeline: ~57.6ms (~17 FPS)
-     - Ball detection: Not detecting small volleyball (threshold: 0.1)
-   - **Status**: Integration complete and tested, person detection functional
+   - Enabled ball visualization (`DISPLAY_BALL_DETECTIONS = True`)
+   - **Final Test Results**:
+     - ✅ Person detection working well (confidence: 0.8, 7 persons detected)
+     - ✅ Ball detection functional (confidence: 0.2, 1 ball detected and displayed)
+     - ✅ Coordinate transformation correct
+     - ✅ Performance: ~22.7ms detection (preprocessing: 3.5ms, model: 18.6ms)
+     - ✅ Overall pipeline: ~55ms (~18 FPS)
+     - ⚠️ Ball detection accuracy poor for small objects (known limitation)
+   - **Status**: Integration complete, functional, and deployed. Ball detection needs optimization.
 
 10. **YOLO-based Alternative Implementation** 🟡
    - Created `scripts/MAIN_YOLO.py` with the same pipeline structure

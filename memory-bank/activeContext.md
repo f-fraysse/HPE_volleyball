@@ -143,24 +143,33 @@ Successfully optimized RT-DETR preprocessing using the same cv2-based approach t
     - Fixed timing statistics for all detectors (proper ms conversion)
     - YOLOX-L comparable speed to RTMDet-M, though slightly lower detection quality
 
-16. **RF-DETR Integration**: Successfully integrated and tested RF-DETR as a fourth detector option:
+16. **RF-DETR Integration**: Successfully integrated, debugged, and deployed RF-DETR as a fourth detector option:
     - Created `pipeline/detectors/rfdetr_onnx.py` with complete ONNX Runtime implementation
-    - **Critical Discovery**: RF-DETR ONNX model uses **1-indexed classes** (class 1 = person, class 33 = sports ball) instead of standard 0-indexed COCO classes
-    - Implemented class ID conversion (subtract 1) to maintain consistency with other detectors
+    - **Critical Discovery #1**: RF-DETR ONNX model uses **1-indexed classes** instead of standard 0-indexed COCO
+    - **Critical Discovery #2**: Correct class mapping is **class 37 = sports ball** (NOT class 33!)
+      - Initially assumed class 33 based on standard COCO ordering
+      - Created inspection script to query RF-DETR package directly
+      - Discovered class 37 is "sports ball", class 33 is "suitcase"
+    - Implemented class ID conversion (subtract 1) to maintain 0-indexed consistency with other detectors
     - Handles RF-DETR's unique output format: `dets` (boxes in [cx, cy, w, h] normalized), `labels` (raw logits for 91 classes)
     - Implemented softmax application to logits for confidence scores
     - Coordinate transformation: [cx, cy, w, h] normalized → [x1, y1, x2, y2] pixel coordinates
     - Letterbox preprocessing with ImageNet normalization (same as RT-DETR)
     - Per-class NMS for person and sports ball detection
-    - **Model Specifications**: RF-DETR Medium uses 576x576 input size (not 640x640)
-    - Updated `scripts/MAIN.py` to support `DETECTOR = 'rfdetr'` option
-    - **Test Results**: 
-      - ✅ Person detection working well (confidence threshold: 0.8)
-      - ✅ Coordinate transformation correct (5 persons detected in first frame)
-      - ✅ Performance: ~22.6ms detection (preprocessing: 3.7ms, model: 18.5ms)
-      - ✅ Overall pipeline: ~57.6ms (~17 FPS)
-      - ⚠️ Ball detection: Not detecting small volleyball (threshold at 0.1, ball is small in video)
-    - **Status**: Integration complete and tested, person detection working well
+    - **Model Specifications**: RF-DETR Medium uses 576x576 input size
+    - **Bug Fixes Applied**:
+      - Fixed class ID in `rfdetr_onnx.py`: 33→37 (filtering), 32→36 (after conversion)
+      - Fixed class ID in `MAIN.py`: 32→36 for ball mask
+      - Enabled `DISPLAY_BALL_DETECTIONS = True` in `MAIN.py`
+    - **Final Test Results**: 
+      - ✅ Person detection working well (confidence: 0.8, 7 persons detected)
+      - ✅ Ball detection functional (confidence: 0.2, 1 ball detected)
+      - ✅ Ball visualization working (red bounding boxes displayed)
+      - ✅ Coordinate transformation correct
+      - ✅ Performance: ~22.7ms detection (preprocessing: 3.5ms, model: 18.6ms)
+      - ✅ Overall pipeline: ~55ms (~18 FPS)
+      - ⚠️ **Known Limitation**: Ball detection accuracy poor for small objects (needs improvement)
+    - **Status**: Integration complete, functional, and deployed. Ball detection needs optimization for small objects.
 
 ## Next Steps
 

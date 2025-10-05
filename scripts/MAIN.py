@@ -44,7 +44,7 @@ record_profiling = True
 
 # Detection and tracking models
 DETECTOR = 'rfdetr'  # Options: 'rtmdet', 'rtdetr', 'yolox', 'rfdetr'
-DISPLAY_BALL_DETECTIONS = False  # Only applies when using RT-DETR, YOLOX, or RF-DETR
+DISPLAY_BALL_DETECTIONS = True  # Only applies when using RT-DETR, YOLOX, or RF-DETR
 RTMDET_MODEL = 'rtmdet-m-640.onnx'
 RTDETR_MODEL = 'rtdetrv2_r50vd_640.onnx'  # large
 YOLOX_MODEL = 'yolox_l.onnx'
@@ -145,8 +145,8 @@ if DETECTOR == 'rfdetr':
     from pipeline.detectors.rfdetr_onnx import RFDETRONNXDetector
     detector = RFDETRONNXDetector(DETECTOR_MODEL, device, backend, 
                                    model_input_size=(576, 576),
-                                   conf_threshold=0.8,  # Lower threshold for testing
-                                   ball_conf_threshold=0.1)  # Also lower ball threshold
+                                   conf_threshold=0.85,  # Lower threshold for testing
+                                   ball_conf_threshold=0.15)  # Also lower ball threshold
 else:
     detector = create_detector(DETECTOR, DETECTOR_MODEL, device, backend, ball_conf_threshold=0.5)
 
@@ -200,7 +200,7 @@ while cap.isOpened():
 
     # Step 2: Separate person and ball detections
     person_mask = det_classes == 0
-    ball_mask = det_classes == 32
+    ball_mask = det_classes == 36  # RF-DETR returns class 36 (was 37 before -1 conversion)
     
     person_bboxes = det_bboxes[person_mask] if person_mask.any() else np.empty((0, 4))
     person_scores = det_scores[person_mask] if person_mask.any() else np.empty((0,))
