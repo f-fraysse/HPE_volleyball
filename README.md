@@ -200,7 +200,7 @@ GPU inference requires a working CUDA installation compatible with your PyTorch/
 
 ## ✏️ Author
 
-Francois Fraysse - UniSA
+Francois Fraysse - UniSA - Code was generated with assistance from Claude Sonnet 4.0 through Cline
 
 Thanks and credits to:  
 - MMPose project - [https://github.com/open-mmlab/mmpose]
